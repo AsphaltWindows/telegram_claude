@@ -1,0 +1,12 @@
+Implementation complete. Here's what was done:
+
+**Changes to `bot.py`:**
+- Removed `send_with_markdown_fallback()` function entirely
+- Removed `from telegram.error import BadRequest` import
+- Updated `send_long_message()` to call `bot.send_message(chat_id=chat_id, text=chunk)` directly — no `parse_mode`, plain text only
+
+**Changes to `test_bot.py`:**
+- Removed `send_with_markdown_fallback` import and its 2-test class
+- Added 3 new tests verifying plain-text sending: no `parse_mode` on single messages, special characters sent cleanly, and no `parse_mode` on any chunk of split messages
+
+**Result:** All 49 tests pass. Task-complete message written to `messages/qa/pending/` for QA validation.

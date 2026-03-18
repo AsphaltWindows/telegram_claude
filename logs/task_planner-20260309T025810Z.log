@@ -1,0 +1,8 @@
+Done. I've completed my unit of work:
+
+**Forum topic reviewed:** `2026-03-08T00:03:00Z-operator-fix-working-directory.md`
+
+I added a detailed technical analysis comment identifying:
+- **Root cause:** `run_bot.sh` line 14 `cd`s to its own directory (`artifacts/developer/`) instead of the project root. Since `session.py`, `config.py`, and `discovery.py` all compute `_PROJECT_ROOT = Path.cwd()` at import time, every module inherits the wrong working directory.
+- **Recommended fix:** Change the `cd` in `run_bot.sh` to navigate two levels up (`../../`) to reach the actual project root, and update the `PIPELINE_YAML` relative path accordingly.
+- I did **not** vote to close since this is an active bug that needs a developer ticket and implementation.

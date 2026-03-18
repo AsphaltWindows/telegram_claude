@@ -1,0 +1,19 @@
+Implementation complete. Here's a summary of what was done:
+
+**Ticket: Add configurable `claude_path` config option and nvm sourcing in `run_bot.sh`**
+
+### Changes Made
+
+1. **`config.py`** — Added `claude_path: Optional[str] = None` to `BotConfig` with validation (rejects empty/non-string values).
+
+2. **`session.py`** — Added `claude_command: str = "claude"` to `SessionManager.__init__` and replaced hardcoded `"claude"` in `create_subprocess_exec` with `self._claude_command`.
+
+3. **`bot.py`** — Wired `config.claude_path or "claude"` to both `SessionManager` and the pre-flight `_check_claude_cli()`. Made `build_application()` accept an optional pre-loaded config to avoid double-loading.
+
+4. **`run_bot.sh`** — Added guarded nvm sourcing (`source "${NVM_DIR:-$HOME/.nvm}/nvm.sh"`) before token validation.
+
+5. **`telegram_bot.yaml`** — Added commented-out `claude_path` example with documentation.
+
+6. **Tests** — Added 9 new tests covering the `claude_path` config field, `SessionManager` custom command, and pre-flight check error messages. All 122 tests pass.
+
+Task-complete message sent to QA at `messages/qa/pending/`.

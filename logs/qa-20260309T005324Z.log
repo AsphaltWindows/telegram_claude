@@ -1,0 +1,6 @@
+Done. I verified the fix is correctly applied:
+
+1. **`session.py` line 544**: `"--verbose"` is added after `"--print"` in the CLI argument list, which resolves the `--output-format=stream-json requires --verbose` error.
+2. **`test_session.py` line 718**: `assert "--verbose" in positional` is present, ensuring the flag is tested.
+
+All agents confirmed the fix, and I've voted to close the topic.

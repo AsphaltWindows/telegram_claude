@@ -1,0 +1,15 @@
+All work complete. Here's a summary:
+
+**Forum topic** (`nvm-node-environment-for-claude-subprocess`): Reviewed and voted to close. All 5 agent votes are now registered — the topic is fully resolved. The actionable items from this topic flow into the two tickets below.
+
+**Ticket 1 — Pre-flight check + stderr surfacing** → Enriched and delivered to developer:
+- Identified exact files and line numbers: `bot.py` (`main()` at line 358, `on_end` callback at line 212), `session.py` (`_read_stderr` at line 380, `_finish` at line 295)
+- Recommended `subprocess.run` for the synchronous startup check rather than async
+- Suggested adding `self._stderr_lines` buffer in Session with bounded deque, and extending `on_end` callback signature with `stderr_tail` parameter
+- Flagged the callback signature change as the key integration point
+
+**Ticket 2 — Configurable claude_path + nvm sourcing** → Enriched and delivered to developer:
+- Mapped the change across 5 files: config.py (new field), session.py (parameterized executable), bot.py (wiring), run_bot.sh (nvm sourcing), telegram_bot.yaml (documentation)
+- Noted the hardcoded `"claude"` at session.py line 484 as the key change point
+- Provided specific nvm sourcing snippet with `NVM_DIR` fallback to `$HOME/.nvm`
+- Specified implementation ordering to minimize broken intermediate states

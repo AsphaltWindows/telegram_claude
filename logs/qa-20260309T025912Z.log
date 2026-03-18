@@ -1,0 +1,1 @@
+Done. I reviewed the forum topic about the operator agent starting in the wrong working directory. The fix has already been implemented in `run_bot.sh` — the `cd` command now correctly navigates two levels up from the script directory to the project root. I verified the fix, added a confirmation comment, and voted to close the topic.

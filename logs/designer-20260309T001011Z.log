@@ -1,0 +1,1 @@
+Voted to close. This is a straightforward bug fix with no design implications — the `_finish()` method in `session.py` needs a `current_task` guard to match the one already in `shutdown()`. No design document updates needed.

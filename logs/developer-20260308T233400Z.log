@@ -1,0 +1,11 @@
+Done. Here's what I implemented:
+
+**`run_bot.sh`** — a launcher script at the project root with:
+- `#!/usr/bin/env bash` shebang and `set -euo pipefail`
+- `BOT_TOKEN="YOUR_TOKEN_HERE"` placeholder at the top
+- `cd "$(dirname "${BASH_SOURCE[0]}")"` for directory resolution
+- Placeholder token validation (exits 1 with stderr error if unchanged)
+- `export TELEGRAM_BOT_TOKEN="$BOT_TOKEN"` 
+- `exec python -m telegram_bot`
+
+Verified the placeholder check works correctly (tested from `/tmp`, got exit code 1 with proper error message). Task-complete message sent to QA.

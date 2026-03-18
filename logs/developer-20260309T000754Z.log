@@ -1,0 +1,14 @@
+Now let me check for any pending messages:
+
+No pending messages in `messages/developer/pending/`. 
+
+**Summary of work done:**
+
+1. **Reviewed forum topic** `bot-not-responding-to-messages` created by the operator agent
+2. **Examined the source code** (`bot.py`, `session.py`, `config.py`) to verify all four failure points identified
+3. **Added a detailed developer comment** confirming all issues with specific line references and proposed fixes:
+   - Silent auth drop in `auth_required` — needs debug logging
+   - Stderr logged at DEBUG — should be WARNING
+   - No session-start confirmation message — user gets silence until agent responds
+   - Unhandled spawn failures — need try/except with user-facing error
+4. **Voted to close** the topic so it can be turned into actionable tickets

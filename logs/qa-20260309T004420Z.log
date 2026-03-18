@@ -1,0 +1,11 @@
+QA complete. All 6 QA steps **PASS**.
+
+**Summary of validation:**
+- Reviewed all 4 changed files (`bot.py`, `session.py`, `test_session.py`, `test_bot.py`)
+- Ran the full test suite: **100/100 tests pass**
+- Verified code logic for all QA scenarios through code review cross-referenced with unit tests
+- Pre-flight CLI check correctly fails fast on missing/broken `claude` binary before the polling loop starts
+- Stderr buffering captures the last 10 lines (truncated to 500 chars) and surfaces them in crash messages
+- Edge cases (empty stderr, long stderr, normal shutdown) are all handled correctly
+
+QA report saved to `artifacts/qa/` and message moved to `messages/qa/done/`.

@@ -1,0 +1,12 @@
+Ticket enriched and delivered. Here's a summary of what I did:
+
+**Processed ticket**: "Fix duplicate message delivery by skipping `result` events in stream-JSON parsing"
+
+**Technical context added**:
+- Identified the exact bug location: lines 86-89 in `session.py` where `_extract_text_from_event()` returns text from `result` events, duplicating what the `assistant` event already delivers
+- Mapped the call chain: `_read_stdout()` → `_extract_text_from_event()` → `on_response` callback → duplicate Telegram message
+- Recommended the cleanest fix: delete the `result` branch entirely and add `"result"` to the skip-list tuple
+- Noted the existing test file (`tests/test_session.py`) that needs a new assertion
+- Provided concrete 4-step implementation instructions
+
+**Enriched ticket written to**: `messages/developer/pending/2026-03-09T02:55:00Z-task_planner-enriched-ticket.md`

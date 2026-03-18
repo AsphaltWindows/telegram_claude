@@ -1,0 +1,15 @@
+Implementation complete. Here's a summary of what was done:
+
+**Problem:** `_PROJECT_ROOT` was computed via `Path(__file__).resolve().parent.parent`, which resolved to `artifacts/developer/` instead of the actual project root. This caused Claude subprocesses to run with the wrong working directory.
+
+**Changes made across 5 files:**
+
+1. **`session.py`**, **`config.py`**, **`discovery.py`** — Replaced `Path(__file__).resolve().parent.parent` with `Path.cwd()` in all three modules. Updated comments to explain the cwd-based approach.
+
+2. **`config.py`** — Added `project_root: Optional[Path] = None` to `BotConfig` dataclass, with YAML parsing and directory-existence validation in `load_config()`.
+
+3. **`bot.py`** — Wired `config.project_root` through to the `SessionManager` constructor.
+
+4. **`tests/test_project_root.py`** — 13 new tests covering: cwd-based computation, module reload proof, SessionManager defaults/overrides/subprocess cwd, config parsing/validation, and bot wiring.
+
+All 74 tests pass (61 existing + 13 new).

@@ -1,0 +1,12 @@
+Done. I processed the pending ticket and produced an enriched ticket for the developer:
+
+**Ticket**: Telegram Bot: Project Scaffolding & Configuration Loading
+
+**What I added as technical context**:
+- **Relevant files**: Mapped all 6 files (4 to create, 2 read-only references) with their purposes
+- **Patterns**: Recommended `dataclass` for config, `yaml.safe_load()`, `pathlib.Path` for path resolution, `ValueError` for validation errors
+- **Dependencies**: Noted `pyyaml` vs `yaml` import gotcha, that `python-telegram-bot` isn't used yet but must be in requirements
+- **Implementation notes**: Suggested config dataclass shape, `load_config()` function API, path resolution strategy (`Path(__file__).parent.parent`), exact yaml template matching the design doc, and file creation order
+- **Integration points**: Noted that future modules (`bot.py`, `session.py`, `discovery.py`) will all import from this config module
+
+The enriched ticket is at `messages/developer/pending/2026-03-08T15:18:00Z-task_planner-enriched-ticket.md`, and the original has been moved to `messages/task_planner/done/`.

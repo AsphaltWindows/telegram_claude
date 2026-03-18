@@ -1,0 +1,13 @@
+Implementation complete. Here's a summary of what was done:
+
+**Created `telegram_bot/discovery.py`** with `discover_source_agents()` that:
+- Reads `pipeline.yaml` and returns names of all `type: source` agents
+- Accepts optional path override (defaults to project root)
+- Handles all error cases: missing file → `FileNotFoundError`, bad YAML/structure → `ValueError`, no source agents → empty list
+- Includes `scheduled: false` agents (as required)
+
+**Created 12 tests** in `telegram_bot/tests/test_discovery.py` — all passing. Covers happy paths (filtering, scheduled:false, empty lists, string paths, real pipeline.yaml) and error cases (missing file, invalid YAML, empty file, missing keys, wrong types, malformed entries).
+
+**Verified against real `pipeline.yaml`**: returns `['operator', 'architect', 'designer']` as expected.
+
+Task-complete message sent to QA at `messages/qa/pending/`.

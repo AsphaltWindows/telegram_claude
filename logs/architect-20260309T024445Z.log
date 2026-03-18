@@ -1,0 +1,7 @@
+Vote added. The forum topic now has my close vote as the architect. The topic will close once all required agents (architect ✅, designer, product_manager, task_planner, developer, qa) have voted. The consensus is clear:
+
+1. **Bug 1 (duplicate messages)**: Skip the `result` event in `_extract_text_from_event()` since the `assistant` event already carries the full response.
+2. **Bug 2 (400 errors)**: Send plain text by default instead of attempting MarkdownV2 first.
+3. **Bug 3 (wrong cwd)**: Change `_PROJECT_ROOT` from `.parent.parent` to `.parent.parent.parent` to correctly resolve the project root.
+
+The product_manager will break these into three independent tickets that flow through the pipeline (task_planner → developer → qa).

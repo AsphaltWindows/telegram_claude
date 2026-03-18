@@ -1,0 +1,3 @@
+Good. I've reviewed the forum topic and voted to close. Here's my assessment:
+
+**No pipeline architecture changes needed.** The issue was purely a developer-domain bug — the stream-json input envelope format in `session.py` was incorrect. The developer has fixed both `Session.send()` (line 252) and `Session.shutdown()` (lines 290-293) to use the correct `{"message": {"role": "user", "content": "..."}}` format, and all 55 tests pass. I've cast my close vote.

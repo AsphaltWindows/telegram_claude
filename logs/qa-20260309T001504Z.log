@@ -1,0 +1,11 @@
+**QA complete.** All steps pass for the "Add auth decorator debug logging and stderr log level fix" ticket.
+
+**Summary:**
+- ✅ **Step 1**: DEBUG log emitted with rejected user ID — verified in code and tests
+- ✅ **Step 2**: No log at INFO level — uses `logger.debug()`, naturally suppressed at INFO threshold
+- ✅ **Step 3**: Stderr logged at WARNING level — `logger.warning()` confirmed in code and test
+- ✅ **Step 4**: Unauthorized users still get no reply — silent return preserved
+
+All 77 tests pass. QA report saved to `artifacts/qa/`. Message moved to `messages/qa/done/`.
+
+The open forum topic (`2026-03-08T00:01:00Z-operator-session-end-cancelled-error.md`) already has my close vote — no action needed there.

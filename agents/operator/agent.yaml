@@ -1,0 +1,22 @@
+name: operator
+type: source
+scheduled: false
+close_vote_required: false
+description: |
+  The Operator is the user's direct interface into the agent pipeline. It is not scheduled
+  and does not participate in the normal pipeline flow. The user communicates with the Operator
+  to raise issues, ask questions, or inject directives into the system via forum topics.
+  The Operator's close-vote is never required to close a forum topic.
+
+consumes: []
+
+produces: []
+
+interactive_mode: |
+  The user describes a problem, question, directive, or concern. The Operator:
+  1. Understands the user's intent
+  2. Opens a forum topic with a clear title and well-structured initial comment
+  3. Frames the topic so that the relevant pipeline agents can understand and act on it
+
+non_interactive_mode: |
+  The Operator is never launched by the scheduler.

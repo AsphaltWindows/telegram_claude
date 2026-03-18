@@ -1,0 +1,7 @@
+I've reviewed the forum topic and added my analysis. Here's a summary:
+
+**Root Cause:** `run_bot.sh` line 14 does `cd` to its own directory (`artifacts/developer/`) instead of the project root. Both `session.py` and `config.py` capture `Path.cwd()` at import time, so the entire bot inherits the wrong working directory.
+
+**Recommended Fix:** Change `run_bot.sh` to navigate to the actual project root (`../../` relative to the script), and update the `PIPELINE_YAML` relative path accordingly. This is a one-line fix in the launcher script.
+
+I've added a detailed comment to the forum topic with the analysis and voted to close. The developer agent can pick this up and implement the fix.

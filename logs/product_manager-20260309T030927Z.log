@@ -1,0 +1,5 @@
+Done. I processed the design-change message and produced one ticket:
+
+**Ticket: Create `install_telegram_bot.sh` script for deploying bot to other projects** — covers pre-flight validation, file copying with credential blanking and path adjustments, dependency installation, and post-install instructions. Includes 6 QA steps covering error cases, successful install, overwrite behavior, and credential stripping verification.
+
+The design change was a single cohesive feature (one shell script), so it maps cleanly to one ticket rather than being artificially split.

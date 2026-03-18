@@ -1,0 +1,15 @@
+**QA processing complete.** Here's the summary:
+
+**Ticket**: Fix subprocess invocation and implement stream-json protocol for agent sessions
+
+**Result**: **PASS** (code review + unit tests)
+
+Key findings:
+- **All 47 tests pass** — comprehensive coverage across event parsing, session I/O, shutdown, idle timeout, crash detection, and SessionManager
+- **All 5 requirements verified**: `--print`, `--output-format stream-json`, `--input-format stream-json`, `--permission-mode bypassPermissions`, and multi-turn support
+- **No raw JSON leak possible** — the parser extracts only assistant text content; internal events (tool_use, system, etc.) are filtered out
+- **`--permission-mode bypassPermissions`** is now included, addressing the caveat from the previous QA report
+
+**Remaining**: 7 manual integration tests require running the bot against a real Telegram instance. These cannot be verified by code review alone.
+
+The pending message has been moved to `messages/qa/done/` and an updated QA report saved to `artifacts/qa/`.

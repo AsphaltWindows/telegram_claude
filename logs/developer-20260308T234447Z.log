@@ -1,0 +1,16 @@
+Done. Here's what I implemented:
+
+**`run_bot.sh` launcher script** — Created at `artifacts/developer/run_bot.sh` with:
+- `BOT_TOKEN="YOUR_TOKEN_HERE"` placeholder (hardcoded token removed)
+- `PIPELINE_YAML="pipeline.yaml"` with default value
+- Robust `cd` to project root using `BASH_SOURCE[0]`
+- Token placeholder validation (exits with error)
+- PIPELINE_YAML resolution to absolute path
+- PIPELINE_YAML file existence validation (exits with error including path)
+- Exports both `TELEGRAM_BOT_TOKEN` and `PIPELINE_YAML`
+- `exec python -m telegram_bot` as final command
+- Executable permission set
+
+**Tests** — 12 assertions all passing, covering every QA scenario.
+
+**Task-complete message** sent to QA at `messages/qa/pending/`.

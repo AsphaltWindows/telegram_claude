@@ -1,0 +1,3 @@
+Only the `operator` is excluded from close votes. All other agents (architect, designer, product_manager, task_planner, developer, qa) need to vote. Currently only `architect` has voted. The topic will remain open until the remaining agents review and vote.
+
+**Summary of my action**: I reviewed the forum topic about the Claude CLI requiring `--verbose` when using `--print` with `--output-format stream-json`. I confirmed this is a developer domain issue requiring a one-line fix in `session.py` (adding `"--verbose"` to the subprocess args). No pipeline or architectural changes are needed. I added my comment and voted to close.

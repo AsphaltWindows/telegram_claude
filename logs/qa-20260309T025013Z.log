@@ -1,0 +1,13 @@
+**QA complete for "Remove MarkdownV2 attempt from message sending — use plain text only".**
+
+**Result: PASS** (automated checks)
+
+Summary of verification:
+- ✅ All **49 tests pass** (including 3 new tests for plain-text sending)
+- ✅ `send_with_markdown_fallback()` fully removed — replaced by single `bot.send_message(chat_id=chat_id, text=chunk)` call
+- ✅ No remnants of `MarkdownV2`, `parse_mode`, or `BadRequest` in `bot.py`
+- ✅ `split_message()` unchanged — long messages still split at 4096 chars
+- ✅ All call sites (`on_response`, `on_end`) unaffected
+- ⏭️ Steps 1–2 (live bot integration) skipped — require running bot instance
+
+Report saved to `artifacts/qa/2026-03-09T03:30:00Z-remove-markdownv2-plain-text-qa-report.md`. Message moved to done.

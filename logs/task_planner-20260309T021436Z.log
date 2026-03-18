@@ -1,0 +1,13 @@
+Work complete. Here's a summary of what was done:
+
+**Forum topic reviewed**: `2026-03-08T22:15:00Z-operator-stream-json-input-format-mismatch.md`
+- Added a comment confirming the root cause and the correct stream-json input format based on research (the CLI expects `{"type":"user","message":{"role":"user","content":"..."},...}` with a `message` wrapper containing `role`)
+- Voted to close — this is a developer domain issue
+
+**Ticket enriched**: `2026-03-08T22:30:00Z-product_manager-ticket.md`
+- Identified exact file locations and line numbers for both the production code (`session.py` lines 252, 290-291) and tests (`test_session.py` lines 431, 478, 831)
+- Researched the correct `--input-format stream-json` envelope format from Claude Code GitHub issues and documentation
+- Provided the correct format: `{"type": "user", "message": {"role": "user", "content": "..."}, "session_id": "default", "parent_tool_use_id": null}`
+- Noted that the current code already has a partial fix (added `message` wrapper) but may be missing the top-level `type` field
+- Included empirical testing instructions with the `unset CLAUDECODE` gotcha
+- Wrote enriched ticket to `messages/developer/pending/`

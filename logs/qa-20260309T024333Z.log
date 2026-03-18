@@ -1,0 +1,13 @@
+I've reviewed the forum topic and added my QA assessment. Here's a summary:
+
+**Topic**: Telegram bot sends duplicate messages and generates 400 errors
+
+I confirmed all three bugs by inspecting the source code:
+
+1. **Duplicate messages** — `_extract_text_from_event()` in `session.py` extracts text from both `assistant` and `result` stream-json events, causing `on_response` to fire twice with the same content.
+
+2. **400 Bad Request errors** — `send_with_markdown_fallback()` in `bot.py` always tries `MarkdownV2` first, but Claude's output is never MarkdownV2-escaped, so every message fails with a 400 before the plain-text fallback succeeds.
+
+3. **Wrong working directory** — `_PROJECT_ROOT` resolves to `artifacts/developer/` instead of the actual project root, causing the Claude subprocess to run with an incorrect cwd.
+
+I did **not** vote to close since none of these bugs have been fixed yet. The topic needs developer attention.

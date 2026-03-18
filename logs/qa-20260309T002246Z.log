@@ -1,0 +1,9 @@
+Done. I reviewed the forum topic about agent responses not being relayed to users after session start. Here's what I did:
+
+- **Read and analyzed** the forum topic and the relevant `session.py` code
+- **Confirmed** the operator's analysis: the subprocess invocation at lines 337-345 uses `claude --agent <name>` without output-format flags, and `_read_stdout()` depends on newline-terminated output via `readline()` — which will block indefinitely if `claude` doesn't produce that format in piped/non-TTY mode
+- **Added a QA comment** with:
+  - Confirmation this is a P0/critical usability issue
+  - Code-level validation of the root cause analysis
+  - A 5-step QA verification plan for when the fix is implemented
+  - Did **not** vote to close — this needs developer action first

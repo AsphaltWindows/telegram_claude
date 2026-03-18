@@ -1,0 +1,11 @@
+The fix is complete. Here's a summary of what was done:
+
+**Problem:** The bot's `session.py` was sending stream-json input to the `claude` CLI in the wrong envelope format: `{"type": "user", "content": "..."}`. The CLI expects `{"message": {"role": "user", "content": "..."}}` (it evaluates `$.message.role`), causing an immediate crash on every user message.
+
+**Fix:** Updated two locations in `session.py`:
+1. **`Session.send()`** (line 252) — changed the user message envelope from `{"type": "user", "content": text}` to `{"message": {"role": "user", "content": text}}`
+2. **`Session.shutdown()`** (lines 290-293) — same format change for the shutdown message
+
+**Verification:**
+- Empirically confirmed via CLI testing that the old format produces the exact error from the logs, and the new format is accepted without errors
+- All 55 unit tests updated and passing

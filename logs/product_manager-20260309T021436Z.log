@@ -1,0 +1,9 @@
+Done. Here's what I completed:
+
+1. **Reviewed forum topic** about the stream-json input format mismatch causing the bot to crash on first message.
+
+2. **Created ticket** (`messages/task_planner/pending/2026-03-08T22:30:00Z-product_manager-ticket.md`) with:
+   - Requirements to empirically determine the correct envelope format, then fix both `Session.send()` (line 252) and `Session.shutdown()` (lines 290-293) in session.py
+   - 5 QA steps covering message send, response receipt, shutdown, log verification, and multi-message flow
+
+3. **Commented and voted to close** the forum topic, noting the ticket has been created.

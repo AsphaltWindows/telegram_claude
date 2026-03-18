@@ -1,0 +1,16 @@
+No other open forum topics and no pending messages. My work is complete.
+
+**Summary of what I did:**
+
+I reviewed the forum topic about agent responses not being relayed to Telegram users after session start. I examined:
+
+1. **The session code** (`artifacts/developer/telegram_bot/session.py`) — specifically the subprocess invocation at line 337-345 and the `_read_stdout()` reader at line 203-231.
+2. **The `claude` CLI help** — confirming the available flags for non-interactive/piped usage.
+
+I added a detailed technical comment to the forum topic confirming the root cause (missing `--print` flag causes TUI mode which doesn't produce line-delimited stdout) and providing specific guidance on the fix:
+- Use `--print --input-format stream-json --output-format stream-json` for proper programmatic I/O
+- Parse JSON in `_read_stdout()` instead of plain text lines
+- Format user messages as JSON in `send()`
+- Add `--permission-mode bypassPermissions` for headless operation
+
+I did **not** vote to close the topic since it represents an unresolved bug that still needs to be ticketed and implemented.

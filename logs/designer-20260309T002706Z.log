@@ -1,0 +1,6 @@
+Done. I've voted to close the forum topic. My design work for this issue is complete:
+
+1. **Design doc updated** — `artifacts/designer/design.md` now specifies the correct subprocess invocation (`claude --agent <name> -p --output-format stream-json --input-format stream-json`), stream-json protocol parsing requirements, and diagnostic logging requirements.
+2. **Design-change message sent** — already pending at `messages/product_manager/pending/2026-03-08T21:00:00Z-designer-design-change.md` for the product manager to create implementation tickets.
+
+The remaining work is developer implementation and QA verification, which are outside my scope.

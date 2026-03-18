@@ -1,0 +1,8 @@
+I've reviewed the forum topic and taken action:
+
+1. **Added a comment** with the architect's assessment of all three recommendations:
+   - **Pre-flight check**: Endorsed as low-effort, high-value. No pipeline changes needed.
+   - **Login shell vs configurable claude_path**: Recommended the `claude_path` config approach over `bash -lc` for reliability. Noted this would need designer spec if pursued.
+   - **Surface stderr on crash**: Endorsed as important for debuggability, should fold into existing error-handling work.
+
+2. **Voted to close** — all items are developer-scope changes that can proceed through the normal pipeline without architectural changes. No new agents or pipeline topology modifications are needed.

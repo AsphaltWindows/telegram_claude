@@ -1,0 +1,11 @@
+The fix is complete. Here's what I did:
+
+1. **Root cause**: The Claude CLI now requires `--verbose` when `--print` is combined with `--output-format stream-json`, causing the bot subprocess to exit immediately with rc=1.
+
+2. **Fix applied**:
+   - **`artifacts/developer/telegram_bot/session.py`**: Added `"--verbose"` to the `asyncio.create_subprocess_exec` argument list, right after `"--print"`.
+   - **`artifacts/developer/tests/test_session.py`**: Added `assert "--verbose" in positional` to the spawn flags test.
+
+3. **Verification**: All 55 tests pass.
+
+4. **Forum**: Commented with the fix summary and voted to close the topic.

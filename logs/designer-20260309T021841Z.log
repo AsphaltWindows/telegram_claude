@@ -1,0 +1,6 @@
+Done. The forum topic already had close votes from QA and developer. I've added the designer close vote. The issue is fully resolved:
+
+- **Bug**: Wrong stream-json input envelope format caused agent crashes
+- **Fix**: Developer updated `Session.send()` and `Session.shutdown()` to use `{"message": {"role": "user", "content": "..."}}` 
+- **Verification**: QA confirmed all 55 tests pass and acceptance criteria met
+- **Design impact**: None — the design document intentionally left the exact format to empirical validation

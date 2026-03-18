@@ -1,0 +1,7 @@
+**QA complete for "Fix wrong subprocess working directory"** — all steps **PASS**.
+
+- **Code review**: All 3 modules (`session.py`, `config.py`, `discovery.py`) correctly replaced `Path(__file__).resolve().parent.parent` with `Path.cwd()`. Configurable `project_root` added to `BotConfig` with proper validation, wired through `bot.py` to `SessionManager`.
+- **Automated tests**: All 13 new tests pass, covering cwd derivation, reload-in-temp-dir proof, SessionManager defaults/overrides, subprocess cwd kwarg, config parsing edge cases, and build_application wiring.
+- **Regression**: Full suite of 74 tests passes with zero failures.
+
+QA report saved to `artifacts/qa/2026-03-09T03:30:00Z-fix-project-root-cwd-qa-report.md`. Message moved to `done/`.

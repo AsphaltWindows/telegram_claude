@@ -1,0 +1,7 @@
+Both forum topics have been reviewed. No pending messages in `messages/developer/pending/`. Here's a summary of what I did:
+
+1. **Forum: "Bot not responding to messages"** — Already had my previous comment with technical analysis. Voted to close (joining product_manager's vote). Consensus is clear: the issues should flow through the ticket pipeline as 3 tickets (auth feedback, session-start confirmation, stderr log level).
+
+2. **Forum: "CancelledError when sending session-end message after idle timeout"** — Confirmed the bug in `session.py`'s `_finish()` method. The method cancels all background tasks unconditionally (lines 186-189), but when called from the idle timeout path (`_idle_timer → shutdown → _finish`), it cancels the currently executing task, causing a `CancelledError` during the subsequent `on_end` callback. The `shutdown()` method already has this guard but `_finish()` does not. Added my comment confirming the proposed fix and voted to close.
+
+No pending enriched tickets to implement. Work complete.

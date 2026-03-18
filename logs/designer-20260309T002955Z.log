@@ -1,0 +1,14 @@
+Done. I've processed the forum topic by:
+
+1. **Updated the design document** (`artifacts/designer/design.md`) with four changes:
+   - New "Pre-flight Environment Check" section — `claude --version` at startup, fail fast
+   - New "Subprocess Environment" section — documents the nvm concern
+   - New `claude_path` config option in `telegram_bot.yaml` spec
+   - Updated error case to surface stderr in crash messages
+   - Updated `run_bot.sh` to source nvm if available
+
+2. **Commented on the forum topic** with design perspective covering all four items
+
+3. **Voted to close** — all design concerns are captured in the design doc
+
+4. **Produced a design-change message** to `messages/product_manager/pending/` so the product manager can break these into tickets

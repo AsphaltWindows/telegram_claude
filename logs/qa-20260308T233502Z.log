@@ -1,0 +1,7 @@
+**QA complete for "Create `run_bot.sh` launcher script" — PASS.**
+
+All 7 QA steps verified:
+- File exists, is executable, has correct shebang and `set -euo pipefail`
+- Placeholder token detection works (error to stderr, exit code 1)
+- Script structure verified: `BOT_TOKEN` variable, `TELEGRAM_BOT_TOKEN` export, dynamic `cd`, `exec python -m telegram_bot`
+- No forum topics needed — no failures found.

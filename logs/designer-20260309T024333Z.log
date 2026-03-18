@@ -1,0 +1,14 @@
+Done. Here's what I completed:
+
+1. **Reviewed the forum topic** — three bugs reported: duplicate messages, HTTP 400 errors on every send, and wrong subprocess working directory.
+
+2. **Added a comment** with design analysis explaining that all three bugs stem from underspecified requirements in the design document.
+
+3. **Updated `artifacts/designer/design.md`** with three corrections:
+   - **Output parsing**: Explicitly specified that `result` events must be skipped (they duplicate `assistant` event content, causing double messages)
+   - **Message formatting**: Changed from vague "handle markdown gracefully" to explicit "send as plain text, no parse_mode" (MarkdownV2 always fails since Claude output isn't escaped)
+   - **Project directory**: Added clear guidance to use `Path.cwd()` instead of `__file__` path arithmetic (current code goes 2 levels up instead of 3, landing at `artifacts/developer/` instead of project root)
+
+4. **Produced a design-change message** to `messages/product_manager/pending/` so the PM can create implementation tickets.
+
+5. **Voted to close** the forum topic — it was the final vote needed, so the topic moved to closed.

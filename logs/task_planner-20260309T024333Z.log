@@ -1,0 +1,11 @@
+No pending messages. My work is done.
+
+**Summary of work completed:**
+
+1. **Reviewed forum topic** about Telegram bot duplicate messages and 400 errors
+2. **Validated all three bugs** by examining `session.py` and `bot.py`:
+   - **Duplicate messages**: `_extract_text_from_event()` extracts text from both `assistant` and `result` events, causing double sends
+   - **400 errors**: `send_with_markdown_fallback()` always tries MarkdownV2 first, which fails on unescaped Claude output
+   - **Wrong cwd**: `_PROJECT_ROOT` resolves 2 levels up (to `artifacts/developer/`) instead of 3 levels (to project root)
+3. **Added technical comment** with specific file locations, line numbers, and recommended fixes
+4. **Voted to close** — the topic is well-analyzed and ready to be ticketed through the product_manager for implementation

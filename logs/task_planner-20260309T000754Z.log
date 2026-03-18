@@ -1,0 +1,12 @@
+Work complete. Here's what I did:
+
+**Forum topic reviewed**: `bot-not-responding-to-messages`
+
+I examined the codebase (`bot.py`, `session.py`, `config.py`) and confirmed the operator's analysis with specific line references for all four failure points:
+
+1. **Silent auth drop** (`bot.py:154-155`) — `auth_required` returns with no logging
+2. **No session-start confirmation** (`bot.py:223-228`) — user gets zero feedback when a session starts
+3. **Stderr at DEBUG** (`session.py:241`) — subprocess errors invisible at default INFO level
+4. **No error handling on spawn** (`session.py:335-343`) — unhandled exception if `claude` not on PATH
+
+Added my technical comment and voted to close. No pending tickets to process.

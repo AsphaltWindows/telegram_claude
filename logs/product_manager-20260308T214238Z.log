@@ -1,0 +1,8 @@
+Done. I processed the design-change message and created **4 tickets** for the Task Planner:
+
+1. **Project Scaffolding & Configuration Loading** — package structure, `config.py`, `telegram_bot.yaml`, `requirements.txt` (no dependencies)
+2. **Agent Discovery from pipeline.yaml** — `discovery.py` to extract source agents (no dependencies, parallelizable with ticket 1)
+3. **Session Management & Process Lifecycle** — `session.py` with subprocess spawning, stdin/stdout piping, idle timeout, graceful shutdown (depends on ticket 1)
+4. **Bot Handlers, Authentication & Entry Point** — `bot.py` wiring everything together: command registration, auth whitelist, message routing, 4096-char splitting (depends on tickets 1–3)
+
+Each ticket has specific, testable requirements and concrete QA steps. A backlog overview is saved in `artifacts/product_manager/backlog.md`.

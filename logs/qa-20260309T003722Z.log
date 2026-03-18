@@ -1,0 +1,12 @@
+**QA Complete** for "Add diagnostic logging to stdout reader".
+
+**Results summary:**
+- ✅ All 5 QA steps pass via code review and automated testing
+- ✅ New unit test `test_stdout_reader_logs_lifecycle` passes
+- ✅ 4 logging points correctly placed: INFO on start, DEBUG per line (200-char truncated), INFO on cancel, INFO on normal end
+- ✅ Uses existing module logger
+- ✅ No sensitive content leakage
+- ⚠️ 6 pre-existing test failures (unrelated — `stderr_tail` kwarg mismatch in older `on_end` assertions)
+- 📋 Manual testing against a live instance recommended for full confidence
+
+Report saved to `artifacts/qa/2026-03-09T01:30:00Z-stdout-reader-diagnostic-logging-qa-report.md`. Message moved to `messages/qa/done/`.

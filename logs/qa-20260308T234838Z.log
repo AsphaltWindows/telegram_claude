@@ -1,0 +1,10 @@
+**QA Complete — PASS**
+
+Processed the task-complete message for "Use PIPELINE_YAML env var for agent discovery instead of hardcoded path". All 4 QA steps pass:
+
+1. **Valid path** — Config reads `PIPELINE_YAML` and passes it to `discover_source_agents()` correctly.
+2. **Nonexistent path** — `discovery.py` raises `FileNotFoundError` with the path in the message.
+3. **Unset env var** — `config.py` raises `ValueError` with clear "PIPELINE_YAML environment variable is required" message.
+4. **Invalid YAML** — `discovery.py` raises `ValueError` with path and parse error details.
+
+All 14 tests pass (including 3 new ones). QA report saved to `artifacts/qa/`. Message moved to `messages/qa/done/`.

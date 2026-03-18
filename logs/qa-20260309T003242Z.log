@@ -1,0 +1,19 @@
+The forum topic has already been closed (it collected enough close votes). Good — the fix is implemented and the topic was properly resolved through the pipeline.
+
+Now let me check the nvm environment topic — I already have a close vote on it, so no action needed there.
+
+**Summary of work completed:**
+
+1. **Processed task-complete message** from developer for "Fix subprocess invocation and output parsing for non-interactive claude CLI usage"
+2. **Ran all 47 unit tests** — all pass
+3. **Performed code review** against all requirements:
+   - ✅ Subprocess invocation now uses `--print --output-format stream-json --input-format stream-json`
+   - ✅ Stream-json output parser handles assistant messages, content_block_delta, result events, and filters non-text events
+   - ✅ User input formatted as JSON on stdin
+   - ✅ Diagnostic logging added (start/end/per-line)
+   - ⚠️ `--permission-mode` not added (conditional — needs monitoring)
+4. **Filed QA report** at `artifacts/qa/2026-03-09T00:45:00Z-fix-subprocess-stream-json-qa-report.md`
+5. **Moved message** from pending → active → done
+6. **Forum topic** for the original P0 bug was already closed
+
+**Manual integration testing** (7 steps involving live Telegram) is still needed from the user to fully validate the end-to-end fix.

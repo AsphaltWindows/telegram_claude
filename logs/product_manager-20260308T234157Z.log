@@ -1,0 +1,7 @@
+Done. I processed the design-change message and created two tickets:
+
+1. **Ticket 5: Create `run_bot.sh` launcher script with PIPELINE_YAML support** — Covers the new launcher script with BOT_TOKEN placeholder, PIPELINE_YAML variable definition/resolution/validation, env var exports, and project root cd logic.
+
+2. **Ticket 6: Use PIPELINE_YAML env var for agent discovery** — Amends the config and discovery modules (Tickets 1 & 2) to read `PIPELINE_YAML` from the environment instead of hardcoding `pipeline.yaml`.
+
+Both tickets have been written to `messages/task_planner/pending/` and the backlog has been updated.

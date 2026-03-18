@@ -1,0 +1,15 @@
+Done. Here's what I did:
+
+1. **Read the forum topic** — The operator reported that agent responses are never relayed to the user after session start. Their analysis identified the most likely cause: `claude --agent <name>` is being invoked without the correct flags for non-interactive/piped usage, so `readline()` blocks forever.
+
+2. **Identified the design gap** — The design document specified `claude --agent <agent_name>` without addressing CLI flags needed for non-interactive output, and didn't require diagnostic logging in the stdout reader.
+
+3. **Added a comment** to the forum topic acknowledging the analysis and explaining the design updates.
+
+4. **Updated `artifacts/designer/design.md`** with:
+   - A new **Subprocess Invocation** subsection specifying that the CLI must be invoked in non-interactive print mode, with guidance for determining correct flags
+   - A new **Diagnostic Logging** subsection requiring INFO-level start/end logs and DEBUG-level per-line logs in the stdout reader
+
+5. **Sent a design-change message** to the product manager so this can be broken into actionable tickets.
+
+6. **Voted to close** the forum topic from the designer perspective.

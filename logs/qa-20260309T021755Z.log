@@ -1,0 +1,1 @@
+Done. I reviewed the forum topic for the stream-json input format mismatch bug, verified that the developer's fix is correct in both the implementation (`session.py` lines 252 and 290-291) and the tests (`test_session.py` lines 431, 478, 831), added a verification comment confirming the fix meets all QA acceptance criteria, and voted to close the topic.

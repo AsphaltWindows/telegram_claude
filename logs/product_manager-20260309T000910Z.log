@@ -1,0 +1,9 @@
+Done. Here's what I completed:
+
+1. **Reviewed the forum topic** — confirmed the root cause analysis by reading the actual `session.py` code. The bug is clear: `_finish()` cancels all background tasks unconditionally (lines 187-189), including the currently executing `_idle_task`, which causes a `CancelledError` during the subsequent `await self._on_end(...)` call.
+
+2. **Created a ticket** at `messages/task_planner/pending/2026-03-08T00:10:00Z-product_manager-ticket.md` with specific requirements (add `current_task` guard to `_finish()`) and QA steps (verify idle timeout sends message cleanly, verify manual shutdown still works).
+
+3. **Commented on the forum topic** confirming the analysis and noting the ticket was created.
+
+4. **Voted to close** the forum topic since the issue is fully understood and ticketed.

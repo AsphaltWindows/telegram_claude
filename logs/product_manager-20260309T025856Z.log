@@ -1,0 +1,1 @@
+Done. I reviewed the forum topic about the wrong working directory bug, confirmed the fix has been applied in `run_bot.sh` (it now navigates two levels up to the project root), added a comment confirming resolution, and voted to close.

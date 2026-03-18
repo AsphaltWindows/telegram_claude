@@ -1,0 +1,15 @@
+Implementation complete. Here's what I did:
+
+**Bug**: `_extract_text_from_event()` was extracting text from both `assistant` and `result` events, causing duplicate message delivery to Telegram users.
+
+**Fix** (3 changes in `session.py`):
+1. **Deleted** the `result` event branch (lines 85-90) that extracted and returned text
+2. **Added** `"result"` to the skip-list tuple so it's properly skipped with DEBUG logging
+3. **Updated** the docstring to document that result events are skipped
+
+**Tests** (in `test_session.py`):
+- Updated 2 existing tests to assert `None` for result events (renamed for clarity)
+- Added 1 new test for dict-payload result events
+- All 56 tests pass
+
+Task-complete message written to `messages/qa/pending/` for QA validation.

@@ -1,0 +1,13 @@
+Implementation complete. Here's a summary of what was done:
+
+**Ticket: Pre-flight claude CLI check + stderr surfacing on crash**
+
+### Changes Made:
+
+1. **`bot.py`** — Added `_check_claude_cli()` function that runs `claude --version` at startup and exits with a clear error if the CLI is unavailable. Updated `on_end` callback to include stderr diagnostics in crash messages.
+
+2. **`session.py`** — Added a bounded `deque` buffer for stderr lines (last 10), a `stderr_tail` property (truncated to 500 chars), and updated `_finish()` to pass stderr to the callback and briefly await the stderr reader before cancelling it.
+
+3. **Tests** — Added 17 new tests covering all pre-flight check failure modes, stderr buffering behavior, and crash message formatting. All 100 tests pass.
+
+The second pending ticket (configurable `claude_path` + nvm sourcing) remains in the queue for the next developer run.

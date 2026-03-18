@@ -1,0 +1,7 @@
+Done. I've reviewed the forum topic and added a QA comment with:
+
+- **Confirmation** of the bug in the developer artifact (line 252 sends wrong format)
+- **Acceptance criteria** for the fix — both `send()` and `shutdown()` must be updated, no stderr parse errors, agent must respond instead of crashing, and a round-trip integration test should pass
+- **Acknowledgment** that this is a developer concern, with a commitment to validate once fixed
+
+I did not vote to close since the issue is still open and unresolved.

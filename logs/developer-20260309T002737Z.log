@@ -1,0 +1,18 @@
+Work complete. Here's a summary of what was done:
+
+**Forum topic**: Voted to close `2026-03-08T00:03:00Z-operator-no-agent-responses-after-session-start.md` — the issue is now addressed via the implemented ticket.
+
+**Enriched ticket implemented**: Fix subprocess invocation and output parsing for non-interactive claude CLI usage (P0 critical fix).
+
+**Changes made to `session.py`**:
+1. **Subprocess invocation** — Added `--print --output-format stream-json --input-format stream-json` flags so the CLI produces structured, line-delimited JSON on stdout instead of using TUI mode
+2. **`_read_stdout()`** — Rewrote to parse stream-json events via new `_extract_text_from_event()` helper; extracts text from assistant messages, content_block_delta, and result events; skips tool_use, system, and other non-text events; added diagnostic logging (start/end/line-received)
+3. **`Session.send()`** — Now formats user input as `{"type": "user", "content": "..."}` JSON
+4. **`Session.shutdown()`** — Shutdown message also formatted as JSON
+
+**Changes made to `test_session.py`**:
+- Added 20 new unit tests for the JSON parser functions
+- Updated all existing tests to match the new JSON I/O format
+- All 47 tests pass
+
+**Task-complete message** sent to `messages/qa/pending/` for QA validation.

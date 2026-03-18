@@ -1,0 +1,6 @@
+No pending messages. My work is done:
+
+1. **Forum topic reviewed**: Read the bug report about duplicate messages, 400 errors, and wrong CWD in the Telegram bot.
+2. **Comment added**: Provided ticket scoping breakdown into 3 independent tickets (duplicate messages, MarkdownV2 fallback, wrong CWD) with specific file/line references and recommended fixes.
+3. **Close vote cast**: Voted to close since the issues are well-understood and ready for ticketing.
+4. **No pending design-change messages** to process.

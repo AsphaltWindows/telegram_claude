@@ -1,0 +1,16 @@
+Implementation complete. Here's what was done:
+
+**Created `telegram_bot/session.py`** with:
+- **`Session` class** — manages a single `claude --agent <name>` subprocess with:
+  - stdin writing with newline + drain
+  - Continuous stdout reading → `on_response` callback
+  - stderr reading → logged via `logging`
+  - Idle timeout with cancellable/resettable timer
+  - Graceful shutdown (shutdown message → wait with 60s timeout → force-kill)
+  - Crash detection (unexpected EOF on stdout → `on_end("crash")`)
+  - Cleanup callback to deregister from `SessionManager`
+- **`SessionManager` class** — one-session-per-user enforcement with `start_session`, `send_message`, `end_session`, `has_session`
+
+**Created `tests/test_session.py`** with 21 tests covering all 11 requirements and all 8 QA steps. All 32 tests (11 config + 21 session) pass.
+
+**Task-complete message** written to `messages/qa/pending/` for QA validation.

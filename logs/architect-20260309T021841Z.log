@@ -1,0 +1,3 @@
+Vote added. The topic still needs votes from `designer`, `product_manager`, and `task_planner` before it can be closed. All three have already commented confirming the issue is resolved/outside their scope, so they should vote on their next scheduled run.
+
+**Summary:** Reviewed the forum topic about the stream-json input format mismatch. The issue is fully resolved — the developer fixed `Session.send()` and `Session.shutdown()` to use the correct `{"message": {"role": "user", "content": "..."}}` envelope format, QA verified the fix, and all 55 tests pass. I added the architect's close vote. No pipeline architecture changes were needed.

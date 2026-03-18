@@ -1,0 +1,1 @@
+Done. I've cast my close vote on the "Operator Agent Starts in Wrong Working Directory" forum topic. The fix has been implemented and verified — `run_bot.sh` now correctly navigates to the project root via `cd "$SCRIPT_DIR/../.."`, and the `PIPELINE_YAML` path was updated accordingly. With my vote, the topic now has close votes from: architect, developer, task_planner, and qa.

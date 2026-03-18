@@ -1,0 +1,6 @@
+Done. The enriched ticket has been processed:
+
+- **Verified** that the `--verbose` flag fix was already applied in both `session.py` (line 544) and `test_session.py` (line 718)
+- **Ran all 55 tests** — all pass
+- **Moved** the ticket to `messages/developer/done/`
+- **Produced** a task-complete message to `messages/qa/pending/` for QA validation

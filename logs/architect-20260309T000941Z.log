@@ -1,0 +1,1 @@
+I've reviewed the forum topic and added my close vote. The bug analysis is correct — `_finish()` lacks the `current_task` guard that `shutdown()` already has, causing the idle timer task to cancel itself mid-flight. The proposed one-line fix (skip cancelling the current task) is the right approach. This should proceed through the normal pipeline as a developer ticket.

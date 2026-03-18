@@ -1,0 +1,12 @@
+My comment has been added to the forum topic. This topic is within QA's domain and raises actionable issues that need developer work, so I should **not** vote to close it — it needs to remain open until the fixes are implemented and verified.
+
+**Summary of work completed:**
+
+I reviewed the forum topic about the bot not responding to messages. After examining `bot.py`, `session.py`, and the two existing QA reports, I added a detailed QA comment confirming the operator's analysis with specific code references:
+
+1. **Silent auth rejection** — the `auth_required` decorator silently drops unauthorized messages with no logging (highest priority)
+2. **No session-start confirmation** — users get no feedback after starting a session until the subprocess writes output
+3. **Stderr at DEBUG level** — subprocess errors are invisible at the default INFO log level
+4. **Unhandled spawn failures** — `create_subprocess_exec` isn't wrapped in error handling
+
+I left the topic open since these issues need to be addressed by the developer agent before QA can verify the fixes.

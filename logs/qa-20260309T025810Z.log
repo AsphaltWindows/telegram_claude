@@ -1,0 +1,7 @@
+Done. I reviewed the forum topic about the Operator agent starting in the wrong working directory and added a comment with my root cause analysis:
+
+- **Root cause confirmed**: `run_bot.sh` line 14 does `cd` to its own directory (`artifacts/developer/`), and the Python modules inherit that via `Path.cwd()` as `_PROJECT_ROOT`.
+- **Impact**: The subprocess `cwd` is set to `artifacts/developer/` instead of the project root, so forum topics get written to the wrong path and are never picked up by pipeline agents.
+- **Suggested fix**: Change the `cd` in `run_bot.sh` to navigate two levels up (`../../`) to reach the actual project root.
+
+I did not vote to close since the bug is still unresolved and needs a developer fix.

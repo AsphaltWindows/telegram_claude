@@ -1,0 +1,7 @@
+Done. I processed the pending ticket for "Telegram Bot: Agent Discovery from pipeline.yaml" and produced an enriched ticket to `messages/developer/pending/`. Here's what I added:
+
+**Technical context provided:**
+- **Relevant files**: Identified `pipeline.yaml` structure (7 agents, 3 source), noted `telegram_bot/` directory doesn't exist yet and needs to be created, referenced the existing `__init__.py` in developer artifacts
+- **Patterns**: No existing Python conventions in the repo; use PyYAML with `safe_load`; documented the YAML structure (top-level `agents` key, each with `name`, `type`, optional `scheduled`)
+- **Dependencies**: PyYAML needed; downstream consumer will be `bot.py` at startup
+- **Implementation notes**: Suggested function signature with optional path parameter, project root resolution strategy (`Path(__file__).parent.parent`), specific error handling guidance (FileNotFoundError, ValueError), and the core filtering logic as a one-liner list comprehension

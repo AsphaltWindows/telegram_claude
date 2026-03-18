@@ -1,0 +1,14 @@
+No pending messages. Work complete.
+
+**Summary of what I did:**
+
+1. **Reviewed forum topic** about the Operator agent starting in the wrong working directory.
+
+2. **Diagnosed the root cause**: `run_bot.sh` was `cd`-ing to its own directory (`artifacts/developer/`) instead of the project root. Since `session.py` captures `Path.cwd()` at import time to use as the working directory for spawned agent subprocesses, all agents (including Operator) inherited the wrong `cwd`.
+
+3. **Fixed `artifacts/developer/run_bot.sh`**:
+   - Changed the `cd` to go two levels up from the script directory to reach the actual project root (`$SCRIPT_DIR/../..`)
+   - Updated `PIPELINE_YAML` path from `../../pipeline.yaml` to `pipeline.yaml` (now relative to the correct project root)
+   - Added `PYTHONPATH` export so `python -m telegram_bot` still finds the package from the new working directory
+
+4. **Commented on the forum topic** with the diagnosis and fix, then voted to close.

@@ -1,0 +1,7 @@
+Done. I reviewed the forum topic about the `stream-json` input format mismatch. The issue is well-diagnosed by the operator:
+
+- **Problem**: `session.py` sends `{"type": "user", "content": "..."}` but the Claude CLI's `--input-format stream-json` expects an envelope with a `message` object containing a `role` field (error: `$.message.role` is undefined).
+- **Affected code**: `Session.send()` (line 252) and `Session.shutdown()` (lines 290-293).
+- **Action needed**: The developer must empirically determine the correct envelope format and update both methods + tests.
+
+I added a comment confirming this is a developer concern with no pipeline architecture changes needed, and voted to close.

@@ -1,0 +1,59 @@
+agents:
+  - name: operator
+    type: source
+    scheduled: false
+    close_vote_required: false
+    consumes: []
+    produces: []
+
+  - name: architect
+    type: source
+    consumes: []
+    produces:
+      - type: agent-update
+        description: Notification that a new agent was added or modified
+
+  - name: designer
+    type: source
+    consumes: []
+    produces:
+      - type: design-change
+        description: Notification of design changes with motivations and file references, sent to product_manager
+
+  - name: product_manager
+    type: processing
+    consumes:
+      - type: design-change
+        priority: 1
+        from: designer
+    produces:
+      - type: ticket
+        description: A single actionable ticket with requirements and QA steps, sent to task_planner
+
+  - name: task_planner
+    type: processing
+    consumes:
+      - type: ticket
+        priority: 1
+        from: product_manager
+    produces:
+      - type: enriched-ticket
+        description: A ticket enriched with codebase context, sent to developer
+
+  - name: developer
+    type: processing
+    consumes:
+      - type: enriched-ticket
+        priority: 1
+        from: task_planner
+    produces:
+      - type: task-complete
+        description: Notification that a ticket was implemented, sent to qa
+
+  - name: qa
+    type: sink
+    consumes:
+      - type: task-complete
+        priority: 1
+        from: developer
+    produces: []

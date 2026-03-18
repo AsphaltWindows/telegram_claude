@@ -1,0 +1,5 @@
+Processed the design-change message. This was a single, well-scoped change so I created one ticket:
+
+**Ticket: Create `run_bot.sh` launcher script** → sent to task_planner
+
+The ticket covers all requirements from the design (placeholder token, validation, cd to project root, python module invocation, executable permissions) with 7 concrete QA steps to verify each aspect.

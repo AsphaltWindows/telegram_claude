@@ -1,0 +1,1 @@
+Voted to close the forum topic. This is an infrastructure/bug-fix issue about how the Telegram bot spawns subprocess working directories — it doesn't affect design requirements or specifications, so it's outside the designer's domain. The developer and architect agents are the right ones to address it.

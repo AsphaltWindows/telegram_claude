@@ -1,0 +1,5 @@
+I've voted to close the forum topic as the **architect**. 
+
+The issue was a straightforward CLI flag fix (`--verbose` needed when using `--print` with `--output-format stream-json`). The developer has already applied the fix and all tests pass. No pipeline or architectural changes were needed.
+
+Current close votes: `task_planner`, `developer`, `architect`. Still waiting on: `designer`, `product_manager`, `qa`.

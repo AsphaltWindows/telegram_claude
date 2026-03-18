@@ -1,0 +1,14 @@
+Done. Here's a summary of what was completed:
+
+**Ticket: Add session-start confirmation message**
+
+**Changes made:**
+
+1. **`artifacts/developer/telegram_bot/bot.py`** — Added `await update.message.reply_text(f"Starting session with \`{agent_name}\`…")` immediately after `start_session()` returns and before any first message is forwarded to the agent.
+
+2. **`artifacts/developer/telegram_bot/tests/test_bot.py`** — Added 3 new tests:
+   - `test_sends_confirmation_message_without_first_message` — confirms correct text when no first message
+   - `test_sends_confirmation_message_with_first_message` — confirms correct text and that `session.send()` is also called
+   - `test_confirmation_sent_before_first_message` — verifies ordering via call-order tracking
+
+All 31 tests pass (28 existing + 3 new). Task-complete message written to `messages/qa/pending/` for QA validation.

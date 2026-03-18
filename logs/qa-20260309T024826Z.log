@@ -1,0 +1,11 @@
+**QA Complete** — processed task-complete message for "Fix duplicate message delivery by skipping `result` events."
+
+**Results: PASS**
+
+- Code review verified: `"result"` added to skip-list, no separate result branch remains, assistant path untouched
+- All **56 unit tests pass**, including 3 new result-skipping tests
+- Docstring properly updated
+- QA report saved to `artifacts/qa/2026-03-09T03:15:00Z-fix-duplicate-message-delivery-qa-report.md`
+- Message moved to `messages/qa/done/`
+
+The only remaining validation is manual integration testing with a live bot (sending messages and confirming no duplicate delivery), which should be done at next deployment.

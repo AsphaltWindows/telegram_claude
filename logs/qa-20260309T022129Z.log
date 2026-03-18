@@ -1,0 +1,10 @@
+**QA processing complete.**
+
+- **Ticket**: Fix stream-json input envelope format — bot crashes on first message
+- **Result**: **PASS** (automated checks)
+- All 55 unit tests pass
+- Code review confirms `"type": "user"` correctly added to both `send()` and `shutdown()` envelopes
+- All three test assertions updated to match the new format
+- Manual Telegram integration testing (live bot message, shutdown, multi-message flow) is deferred to the user
+
+QA report saved to `artifacts/qa/2026-03-09T03:00:00Z-fix-stream-json-envelope-qa-report.md`. Message moved to `messages/qa/done/`.

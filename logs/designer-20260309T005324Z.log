@@ -1,0 +1,1 @@
+Voted to close. The topic is a resolved CLI compatibility bug — no design implications. The fix (adding `--verbose` to the subprocess args) has already been implemented and tested by the developer.

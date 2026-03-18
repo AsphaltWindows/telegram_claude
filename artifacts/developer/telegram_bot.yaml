@@ -1,0 +1,16 @@
+# Telegram user IDs allowed to interact with the bot
+allowed_users:
+  - 106830816
+
+# Idle timeout in seconds before auto-ending a session
+idle_timeout: 600
+
+# Graceful shutdown message sent to agent on /end or timeout
+shutdown_message: "Record the product of this conversation as appropriate for your role and exit."
+
+# Optional: absolute path to the claude CLI binary.
+# Use this when claude is not on PATH (e.g. when running from systemd/cron
+# and nvm sourcing alone is insufficient, or when multiple versions are
+# installed and you want to pin a specific one).
+# If unset, the bot resolves "claude" from PATH.
+# claude_path: "/home/user/.nvm/versions/node/v22.14.0/bin/claude"

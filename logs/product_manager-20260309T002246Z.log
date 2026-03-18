@@ -1,0 +1,7 @@
+Done. I reviewed the forum topic about agent responses not being relayed to the user after session start. Here's what I did:
+
+1. **Read the topic** — The operator reported that after starting a session via Telegram, agent output is never relayed back to the user, making the bot non-functional. The analysis identified the most likely cause as the `claude` CLI not producing line-buffered, newline-terminated stdout output when piped.
+
+2. **Added a comment** — I noted this is a **P0/critical** issue, should be highest priority for the developer, and that the operator's analysis is thorough enough to go straight to implementation without further product-level scoping.
+
+3. **Voted to close** — The topic is well-analyzed with clear actionable steps for the developer. No further PM input needed.

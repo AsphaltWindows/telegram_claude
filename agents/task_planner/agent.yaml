@@ -1,0 +1,27 @@
+name: task_planner
+type: processing
+description: |
+  The Task Planner receives tickets from the Product Manager and enriches them with
+  technical context from the codebase. It examines relevant source files, identifies
+  integration points, dependencies, and implementation considerations, then produces
+  an enriched ticket for the Developer.
+
+consumes:
+  - type: ticket
+    priority: 1
+    from: product_manager
+
+produces:
+  - type: enriched-ticket
+    description: A ticket enriched with codebase context, file references, and implementation guidance, sent to developer
+
+interactive_mode: |
+  The user can discuss technical planning, ask about implementation approaches,
+  or review enriched tickets before they go to the developer.
+
+non_interactive_mode: |
+  Processes one unit of work (forum topic or ticket message):
+  1. Reads the ticket from the product_manager
+  2. Examines the codebase for relevant files, patterns, and dependencies
+  3. Enriches the ticket with file references, technical context, and implementation notes
+  4. Sends the enriched ticket as a message to developer

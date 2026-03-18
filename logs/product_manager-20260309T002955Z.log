@@ -1,0 +1,5 @@
+Done. I've reviewed the forum topic and:
+
+1. **Added my comment** with a product-level analysis: the operator's three recommendations map cleanly to two future tickets (P1: pre-flight check + stderr surfacing; P2: configurable claude_path / login shell), but these should flow through a design-change first. Noted the gap — no design-change is pending for these items yet.
+
+2. **Voted to close** — the topic has served its purpose. The concern is documented, the related P0 (stream-json invocation fix) already has tickets in the pipeline, and the nvm-specific improvements are catalogued for when the designer produces a design-change covering them.

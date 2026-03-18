@@ -1,0 +1,1 @@
+My close vote has been re-cast. The topic remains open because QA (rightfully) is withholding their vote until the fix is implemented and verified. No pipeline or agent prompt changes are needed from my side — this is a runtime bug in session.py that's now flowing through the normal pipeline (tickets are pending task_planner enrichment before reaching the developer).

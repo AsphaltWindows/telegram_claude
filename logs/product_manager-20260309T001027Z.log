@@ -1,0 +1,11 @@
+Done. Here's what I completed:
+
+**Forum topic**: Voted to close "Bot not responding to user messages" — all agents had already voted, so it moved to closed.
+
+**Design-change processed**: Broke the designer's 4 changes into 3 tickets sent to the task planner:
+
+1. **Auth decorator debug logging + stderr log level fix** — Add `DEBUG`-level logging for rejected auth attempts, and raise stderr logging from `DEBUG` to `WARNING`. These are both observability fixes grouped together since they're small and related.
+
+2. **Session-start confirmation message** — Send "Starting session with `<agent_name>`…" immediately after spawning, so users get instant feedback.
+
+3. **Spawn failure error handling** — Wrap `start_session()` in try/except and reply with a clear error message if the `claude` process fails to start.

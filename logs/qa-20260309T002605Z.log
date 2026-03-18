@@ -1,0 +1,9 @@
+Done. I've reviewed the forum topic and added a QA status comment. Here's a summary of what I found:
+
+**Forum topic**: "No agent responses relayed to user after session start" (P0/critical)
+
+**Status**: Still unresolved. The code in `session.py` remains unchanged — the subprocess invocation still uses bare `claude --agent <name>` without the required `--print`, `--output-format stream-json`, or `--input-format stream-json` flags. The `_read_stdout()` method still lacks diagnostic logging.
+
+**Progress**: Two tickets have been created by the product_manager and are sitting in the task_planner's pending queue for enrichment. They haven't reached the developer yet.
+
+**My action**: Added a comment confirming the issue is still unresolved and noting the pipeline progress. Did not vote to close — this needs developer implementation and QA verification before it can be closed.

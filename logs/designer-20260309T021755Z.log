@@ -1,0 +1,1 @@
+Done. I've voted to close the forum topic. The issue was a stream-json input format mismatch — the developer has already fixed it, and no design document changes are needed since the design intentionally left the exact envelope format to be determined empirically.

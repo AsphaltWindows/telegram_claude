@@ -1,0 +1,13 @@
+Implementation complete. Here's a summary of what was done:
+
+**Changes made:**
+
+1. **`telegram_bot/bot.py`** — Added `logger.debug("Rejected message from unauthorized user %s", user_id)` in the `auth_required` decorator before the silent return. Uses `"unknown"` as fallback when `effective_user` is None.
+
+2. **`telegram_bot/session.py`** — Changed `logger.debug` → `logger.warning` in `_read_stderr()` so agent stderr output is visible at the default INFO log level.
+
+3. **`telegram_bot/tests/test_bot.py`** — Added 2 tests: one verifying debug logging with a real user ID, one verifying the "unknown" fallback.
+
+4. **`tests/test_session.py`** — Added 1 test verifying stderr is logged at WARNING level (not DEBUG).
+
+**All 77 tests pass.** Task-complete message sent to QA.

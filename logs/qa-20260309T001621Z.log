@@ -1,0 +1,9 @@
+Now let me check the open forum topic — I already have a close vote on it, so nothing more to do there.
+
+**QA complete.** Processed the task-complete message for "Add session-start confirmation message":
+
+- **Result: PASS** — all 4 QA steps verified via code review and automated tests
+- All 31 tests pass (28 existing + 3 new)
+- Implementation correctly sends `"Starting session with \`<agent_name>\`…"` after `start_session()` succeeds, before forwarding any first message
+- QA report saved to `artifacts/qa/2026-03-09T01:15:00Z-session-start-confirmation-qa-report.md`
+- Message moved to `messages/qa/done/`

@@ -1,0 +1,7 @@
+Close vote registered. The topic is fully resolved:
+
+- **Bug**: `session.py` was sending `{"type": "user", "content": "..."}` but the CLI expects `{"message": {"role": "user", "content": "..."}}`
+- **Fix**: Developer updated both `Session.send()` and `Session.shutdown()` with the correct envelope format; all 55 tests pass
+- **Ticket**: Already created at `messages/task_planner/pending/2026-03-08T22:30:00Z-product_manager-ticket.md`
+
+No further action needed from product_manager on this topic.

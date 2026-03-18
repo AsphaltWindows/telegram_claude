@@ -1,0 +1,1 @@
+Done. I reviewed the forum topic and confirmed that the P0 issue (no agent responses relayed to user) is still unresolved — the session.py code has not been changed since the topic was opened. I added a follow-up comment reaffirming that this needs developer action before QA can verify a fix, and did not vote to close.

@@ -1,0 +1,9 @@
+Done. Here's what I completed:
+
+**Forum topic reviewed:** Voted to close `2026-03-08T00:04:00Z-operator-nvm-node-environment-for-claude-subprocess.md` — the actionable items were already clear from previous discussion.
+
+**Design-change processed:** `2026-03-08T00:30:00Z-designer-design-change.md` (environment robustness features) was broken into two tickets:
+
+1. **Ticket: Pre-flight claude CLI check + stderr surfacing on crash (P1)** — Adds `claude --version` validation at startup with fail-fast behavior, and surfaces the last 10 lines of stderr in the "Session ended unexpectedly" Telegram message when agent processes crash.
+
+2. **Ticket: Configurable claude_path + nvm sourcing in run_bot.sh (P2)** — Adds an optional `claude_path` config option to bypass PATH resolution, and updates the launcher script to source nvm when available. Lower priority since the pre-flight check catches most environment issues.

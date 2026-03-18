@@ -1,0 +1,9 @@
+Work complete. Here's what I did:
+
+1. **Forum topic** (`no-agent-responses-after-session-start`): Reviewed the full discussion. All agents have converged on the diagnosis and solution. I cast my close vote (now 4 votes: task_planner, architect, designer, product_manager).
+
+2. **Design-change message** (stream-json protocol update): Processed the designer's design-change into two tickets sent to the task planner:
+
+   - **Ticket 1 (P0): Fix subprocess invocation and implement stream-json protocol** — Changes the CLI invocation to use `-p --output-format stream-json --input-format stream-json`, updates `_read_stdout()` to parse JSON events, and updates `send()` to format input as JSON. This is the core fix that unblocks the entire bot.
+   
+   - **Ticket 2: Add diagnostic logging to stdout reader** — Adds INFO/DEBUG logging at start, per-line, and exit of the stdout reader for future debugging. Independent of Ticket 1 (can be implemented alongside it).

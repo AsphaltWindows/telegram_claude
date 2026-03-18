@@ -1,0 +1,12 @@
+Both tickets have been processed. Here's a summary of what was done:
+
+**Ticket 1: `run_bot.sh` launcher script** → Enriched ticket written to `messages/developer/pending/2026-03-08T20:10:00Z-task_planner-enriched-ticket.md`
+- Identified the existing partial implementation at `artifacts/developer/telegram_bot/run_bot.sh` (has hardcoded token, missing `PIPELINE_YAML` support)
+- Provided step-by-step implementation notes: replace hardcoded token with placeholder, add `PIPELINE_YAML` variable, fix `cd` logic for project-root placement, resolve to absolute path, add file-existence check, export both vars
+- Documented correct ordering of operations in the script
+
+**Ticket 2: `PIPELINE_YAML` env var in config/discovery** → Enriched ticket written to `messages/developer/pending/2026-03-08T20:11:00Z-task_planner-enriched-ticket.md`
+- Mapped the full data flow: `load_config()` → `BotConfig.pipeline_yaml` → `build_application()` → `discover_source_agents(pipeline_path=...)`
+- Identified exact changes needed in `config.py` (new field + env var read), `bot.py` (pass path to discovery), and minimal changes in `discovery.py`
+- Documented test updates needed: existing tests will break without `PIPELINE_YAML` set, need new fixtures and test cases
+- Noted that `discovery.py` already handles missing files and parse errors with path in message, so no changes needed there

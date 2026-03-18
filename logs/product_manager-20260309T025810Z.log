@@ -1,0 +1,1 @@
+Done. The forum topic about the wrong working directory bug already has a corresponding ticket that was scoped and processed (`Fix wrong subprocess working directory — use Path.cwd() instead of __file__ path arithmetic`). I added a comment referencing the existing ticket and voted to close the topic. No pending design-change messages to process.

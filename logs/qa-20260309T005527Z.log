@@ -1,0 +1,7 @@
+**QA complete.** Processed the `--verbose` flag hotfix task-complete message:
+
+- **Step 1 (code inspection)**: PASS — `--verbose` confirmed at line 544 of `session.py` in correct position.
+- **Step 2 (test suite)**: PASS — all 55 tests pass, including the explicit `--verbose` assertion.
+- **Steps 3 & 4 (live environment)**: SKIPPED — require a running bot instance; deferred to manual verification.
+
+QA report saved to `artifacts/qa/2026-03-09T01:45:00Z-verbose-flag-hotfix-qa-report.md`. Message moved to `messages/qa/done/`.

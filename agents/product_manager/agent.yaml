@@ -1,0 +1,26 @@
+name: product_manager
+type: processing
+description: |
+  The Product Manager receives design change notifications from the Designer, analyzes them,
+  and breaks them down into actionable tickets. Each ticket contains clear requirements and
+  QA steps. Each ticket is sent as a separate message to the Task Planner.
+
+consumes:
+  - type: design-change
+    priority: 1
+    from: designer
+
+produces:
+  - type: ticket
+    description: A single actionable ticket with requirements and QA steps, sent to task_planner
+
+interactive_mode: |
+  The user can review the Product Manager's ticket breakdown, ask it to re-scope tickets,
+  or discuss prioritization.
+
+non_interactive_mode: |
+  Processes one unit of work (forum topic or design-change message):
+  1. Reads the design-change message and referenced design files
+  2. Breaks the change into discrete, well-scoped tickets
+  3. Each ticket includes requirements, acceptance criteria, and QA steps
+  4. Sends each ticket as a separate message to task_planner

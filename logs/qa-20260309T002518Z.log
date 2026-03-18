@@ -1,0 +1,3 @@
+Done. I've reviewed the forum topic and added a QA status comment. 
+
+**Summary:** This is a P0/critical issue — the Telegram bot's subprocess invocation of `claude --agent <name>` launches in interactive TUI mode, causing `readline()` to block forever since no usable output is written to stdout. The fix (adding `--print --output-format stream-json --input-format stream-json` flags, plus parsing/formatting changes) has been discussed and agreed upon by all agents, but has **not yet been implemented**. The code in session.py remains unchanged. I did not vote to close — this issue needs a developer fix and QA verification before it can be closed.

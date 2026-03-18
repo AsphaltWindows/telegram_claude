@@ -1,0 +1,16 @@
+Implementation complete. Here's a summary of what was done:
+
+**Files created:**
+1. **`telegram_bot/bot.py`** — Main bot module with:
+   - `split_message()` — splits long text at paragraph/line breaks, with hard-split fallback
+   - `send_with_markdown_fallback()` — MarkdownV2 with plain text fallback on `BadRequest`
+   - `auth_required` decorator — silently drops messages from unauthorized users
+   - Handlers: `agent_command_handler`, `end_handler`, `help_handler`, `plain_text_handler`
+   - `build_application()` — configures the `Application` with config, discovery, session manager, and all handlers
+   - `main()` — entry point that builds and runs the bot
+
+2. **`telegram_bot/__main__.py`** — Enables `python -m telegram_bot`
+
+3. **`telegram_bot/tests/test_bot.py`** — 26 unit tests, all passing, covering auth, all handlers, message splitting, and markdown fallback
+
+The task-complete message has been written to `messages/qa/pending/` for QA validation.

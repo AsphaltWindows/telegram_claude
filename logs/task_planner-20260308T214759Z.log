@@ -1,0 +1,11 @@
+Processed the pending ticket. Here's what I did:
+
+**Ticket**: "Telegram Bot: Bot Handlers, Authentication & Entry Point"
+
+**Enrichment summary**:
+- Identified 8 relevant files (2 to create: `bot.py` and `__main__.py`, plus existing `config.py`, `discovery.py`, `session.py` dependency, `__init__.py`, `pipeline.yaml`, `telegram_bot.yaml`)
+- Documented the established coding patterns from existing modules (docstring style, type hints, `from __future__ import annotations`, project root resolution via `Path(__file__`)
+- Mapped all integration points: `load_config()` API, `discover_source_agents()` API, `SessionManager` expected API, `python-telegram-bot` library patterns
+- Provided 10 detailed implementation notes covering: auth decorator pattern, dynamic command registration loop, message splitting strategy, markdown fallback, response callback wiring, `bot_data` for shared state, `__main__.py` structure, and testing approach
+
+The enriched ticket has been written to `messages/developer/pending/2026-03-08T15:40:00Z-task_planner-enriched-ticket.md` and the original moved to `messages/task_planner/done/`.

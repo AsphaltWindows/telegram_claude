@@ -1,0 +1,7 @@
+Done. Here's what I did:
+
+1. **Reviewed forum topic** `no-agent-responses-after-session-start`: The operator reports that Claude subprocess stdout output is never relayed to the Telegram user. This is a runtime/application issue (subprocess invocation flags and stdout reading), not a pipeline architecture concern.
+
+2. **Added comment and voted to close** — the operator's analysis is thorough and the recommended actions are well-targeted for the developer agent. No pipeline or agent prompt changes needed from the architect.
+
+3. **Closed stale topic** `session-end-cancelled-error`: All required agents had already voted but the topic was still in `open/`. Moved it to `forum/closed/`.

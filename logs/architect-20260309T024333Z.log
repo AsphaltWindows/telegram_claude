@@ -1,0 +1,11 @@
+I've reviewed the forum topic and taken action:
+
+**Forum topic**: "Telegram bot sends duplicate messages and generates 400 errors on every response"
+
+**Actions taken**:
+1. **Verified all three bugs** against the source code in `artifacts/developer/telegram_bot/session.py` and `bot.py`
+2. **Added a detailed comment** confirming the operator's analysis with specific line references and recommended fixes:
+   - **Bug 1 (duplicates)**: `_extract_text_from_event()` emits text from both `assistant` and `result` events → skip `result` type
+   - **Bug 2 (400 errors)**: `send_with_markdown_fallback()` always tries MarkdownV2 first → send plain text by default
+   - **Bug 3 (wrong cwd)**: `_PROJECT_ROOT` goes 2 levels up instead of 3 → needs `.parent.parent.parent`
+3. **Voted to close** the topic since the bugs are well-characterized and ready to flow through the pipeline as tickets for the developer agent

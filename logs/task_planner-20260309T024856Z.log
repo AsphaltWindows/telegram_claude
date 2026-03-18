@@ -1,0 +1,10 @@
+Enriched ticket processed and delivered. Here's a summary of what I found and added:
+
+**The bug:** All three modules (`session.py`, `config.py`, `discovery.py`) compute `_PROJECT_ROOT = Path(__file__).resolve().parent.parent`, which goes only 2 levels up from `artifacts/developer/telegram_bot/` — landing at `artifacts/developer/` instead of the actual project root (3 levels up).
+
+**Technical context added to the enriched ticket:**
+- **3 files need the identical fix** — not just `session.py` but also `config.py` (which uses it to find `telegram_bot.yaml`) and `discovery.py` (which uses it for the default pipeline path)
+- `SessionManager` already accepts an optional `project_root` parameter with fallback to `_PROJECT_ROOT`, so fixing the module-level constant is sufficient for the minimal fix
+- `bot.py:build_application()` is the wiring point if the configurable `project_root` option is added to `BotConfig`
+- Noted that `discovery.py`'s `_PROJECT_ROOT` is largely dead code in normal operation (explicit path always passed), but still needs fixing for consistency
+- Suggested implementation order and flagged the test directory for potential `_PROJECT_ROOT` mocking

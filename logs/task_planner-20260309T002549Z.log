@@ -1,0 +1,15 @@
+Done. Here's a summary of what I completed:
+
+**Forum topic** (`no-agent-responses-after-session-start`): Voted to close. The discussion has fully converged — the root cause is identified (bare `claude --agent <name>` launches TUI mode) and the fix is agreed upon (`--print --output-format stream-json --input-format stream-json`). Tickets have been created and are now flowing through the pipeline.
+
+**Enriched ticket 1** — *Fix subprocess invocation and output parsing* (P0 critical):
+- Identified all 4 methods in `session.py` that need changes: `start_session()` (subprocess args), `_read_stdout()` (JSON parsing), `send()` (JSON input formatting), `shutdown()` (shutdown message formatting)
+- Documented test file impacts — existing assertions on subprocess args and stdin writes will break
+- Provided specific implementation guidance including the JSON parsing approach, response aggregation strategy, and risk mitigation (empirically test the CLI protocol first)
+- Noted the `config.py` dependency for shutdown message formatting
+
+**Enriched ticket 2** — *Add diagnostic logging to stdout reader*:
+- Provided exact line-by-line placement for all 3 log statements
+- Documented the multiple exit paths from `_read_stdout()` (EOF vs CancelledError) and suggested a clean control-flow approach
+- Referenced the existing test pattern for log verification (`test_stderr_logged_at_warning_level`)
+- Noted this is independently implementable regardless of the P0 fix ordering

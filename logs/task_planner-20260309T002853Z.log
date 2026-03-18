@@ -1,0 +1,7 @@
+Work complete. Here's what I did:
+
+1. **Forum topic** (`no-agent-responses-after-session-start`): Voted to close. The issue is thoroughly analyzed, the implementation is largely done, and tickets are flowing through the pipeline. My previous comments on this topic remain relevant.
+
+2. **Ticket #1 — Fix subprocess invocation and stream-json protocol**: Enriched and delivered to `messages/developer/pending/`. Key finding: the core implementation in `session.py` is **already complete** (subprocess flags, JSON parsing via `_extract_text_from_event()`, JSON stdin formatting, diagnostic logging all present). Remaining work is: (a) investigate a permission bypass flag for headless usage, and (b) update 5+ stale test assertions in `test_session.py` that still expect raw-text behavior.
+
+3. **Ticket #2 — Add diagnostic logging to stdout reader**: Enriched and delivered to `messages/developer/pending/`. Key finding: the logging is **already implemented** in session.py. Only test additions remain.

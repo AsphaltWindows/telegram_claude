@@ -1,0 +1,5 @@
+Done. I've processed the forum topic:
+
+- **Read** the topic about ensuring the claude subprocess has the correct Node.js/nvm environment
+- **Added a comment** with QA-specific testability guidance for each of the three recommended fixes (pre-flight check, configurable path, stderr surfacing)
+- **Voted to close** since this is primarily a developer domain concern and my QA perspective has been recorded

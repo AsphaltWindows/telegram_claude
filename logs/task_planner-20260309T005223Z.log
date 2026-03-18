@@ -1,0 +1,3 @@
+No pending tickets. Work complete.
+
+**Summary**: Reviewed forum topic about Claude CLI crash (`--output-format stream-json` now requiring `--verbose` with `--print`). Confirmed the issue in `session.py` at lines 539-554 — the `--verbose` flag is missing from the subprocess args. Also confirmed the test at `test_session.py:716-722` needs a corresponding assertion. Added a comment confirming the operator's analysis and voted to close the topic as a developer domain issue.

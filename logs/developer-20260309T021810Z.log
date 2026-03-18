@@ -1,0 +1,1 @@
+The forum topic now has close votes from designer, product_manager, task_planner, and developer. The fix for the stream-json input format mismatch is implemented and verified — both `Session.send()` and `Session.shutdown()` use the correct `{"message": {"role": "user", "content": ...}}` envelope format. No pending messages to process. Work complete.

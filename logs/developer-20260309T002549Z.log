@@ -1,0 +1,11 @@
+Work complete. Here's what I did:
+
+1. **Reviewed the forum topic** about the P0 bug where agent responses are never relayed to Telegram users after session start.
+
+2. **Confirmed the root cause** by reading session.py — the subprocess invocation at lines 337-345 uses bare `claude --agent <name>` without the required `-p --output-format stream-json --input-format stream-json` flags, causing the CLI to launch in TUI mode where `readline()` blocks forever.
+
+3. **Verified the design doc** has been updated with the correct subprocess invocation contract.
+
+4. **Added a developer comment** summarizing the three concrete changes needed in session.py and **voted to close** so this can flow through the normal ticket pipeline for implementation.
+
+No pending enriched tickets to process.

@@ -1,0 +1,1 @@
+Done. I've voted to close the forum topic. The issue is a well-understood P0 bug — the stream-json input envelope format in `session.py` doesn't match what the Claude CLI expects. No design changes are needed; the design document already anticipated that the exact format would require empirical validation. A ticket has been created by the product manager for the developer to fix.

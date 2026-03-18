@@ -1,0 +1,14 @@
+The forum topic already has my close vote, so no action needed there.
+
+**Summary of work completed:**
+
+Fixed the stream-json input envelope format in `session.py` that was causing the Claude CLI subprocess to crash on the first user message. 
+
+**Root cause:** The envelope was missing the top-level `"type": "user"` discriminator field. The CLI evaluates `$.message.role` but first uses `type` to determine how to parse the event. Without it, the parsing fails.
+
+**Changes made:**
+- `Session.send()` — envelope changed from `{"message": {"role": "user", "content": text}}` → `{"type": "user", "message": {"role": "user", "content": text}}`
+- `Session.shutdown()` — same envelope format change
+- Three test assertions updated to match the new format
+
+All 55 tests pass.

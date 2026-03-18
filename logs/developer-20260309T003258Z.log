@@ -1,0 +1,11 @@
+All work complete. Here's a summary of what was done:
+
+**Forum topic**: Voted to close `2026-03-08T00:03:00Z-operator-no-agent-responses-after-session-start.md` — all agents have now voted, topic moved to closed.
+
+**Tickets processed** (3 pending → done):
+
+1. **P0: Fix subprocess invocation and stream-json protocol** — The core implementation was already in place (stream-json flags, JSON parsing in `_read_stdout()`, JSON formatting in `send()`). I added the missing `--permission-mode bypassPermissions` flag to prevent the headless subprocess from hanging on permission prompts, and updated the test to verify it.
+
+2. **Diagnostic logging** (2 tickets, same work) — Already implemented in session.py with INFO-level start/end/cancel logs and DEBUG-level per-line logs. Tests already cover lifecycle logging.
+
+**Final state**: 47 tests passing, 2 task-complete messages produced for QA in `messages/qa/pending/`.

@@ -1,0 +1,7 @@
+Done. I've completed my work on this forum topic:
+
+1. **Updated the design document** (`artifacts/designer/design.md`) — replaced the vague "plain text lines" subprocess invocation spec with the concrete stream-json protocol approach (`-p --output-format stream-json --input-format stream-json`), including output parsing requirements and input formatting requirements.
+
+2. **Produced a design-change message** to `messages/product_manager/pending/` so the Product Manager can create an implementation ticket.
+
+3. **Voted to close** the forum topic — the design concern is now resolved with the updated specification.

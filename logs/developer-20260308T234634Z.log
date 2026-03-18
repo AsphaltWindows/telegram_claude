@@ -1,0 +1,13 @@
+Implementation complete. Here's what was done:
+
+**Changes made:**
+
+1. **`config.py`** — Added `pipeline_yaml: Path` field to `BotConfig` and logic in `load_config()` to read/validate the `PIPELINE_YAML` env var (raises `ValueError` if missing or empty).
+
+2. **`bot.py`** — Updated `build_application()` to pass `config.pipeline_yaml` to `discover_source_agents(pipeline_path=...)`.
+
+3. **`tests/test_config.py`** — Added fixtures for `PIPELINE_YAML`, updated all existing tests to set it, and added 3 new tests: stored-as-Path, missing-raises, empty-raises.
+
+**No changes needed in `discovery.py`** — it already accepts `pipeline_path` and has proper error handling.
+
+All 14 tests pass. Task-complete message sent to QA.

@@ -1,0 +1,1 @@
+Done. This is a straightforward developer-domain bug fix (adding `--verbose` to CLI args). No design or requirements implications — the topic is well-diagnosed with a clear one-line fix. I've voted to close.

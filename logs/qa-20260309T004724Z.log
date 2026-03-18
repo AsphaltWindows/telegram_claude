@@ -1,0 +1,14 @@
+**QA Complete** — Processed task-complete message for "Add configurable claude_path config option and nvm sourcing in run_bot.sh".
+
+**Result: PASS** (automated checks)
+
+- All 133 tests pass
+- Code review confirms correct implementation across all 8 changed files
+- `claude_path` config field properly validated, threaded through config → bot → session manager → subprocess
+- Fallback to bare `"claude"` works correctly when unset
+- `run_bot.sh` nvm sourcing is properly guarded
+- Documentation added to `telegram_bot.yaml`
+
+Steps 1, 5, 6, 7 noted as requiring manual integration testing (nvm, systemd, real claude binary). No issues found — no forum topics created.
+
+Report saved to `artifacts/qa/2026-03-09T01:45:00Z-claude-path-config-qa-report.md`. Message moved to `messages/qa/done/`.

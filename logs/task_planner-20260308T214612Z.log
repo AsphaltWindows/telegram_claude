@@ -1,0 +1,16 @@
+Done. I processed the pending ticket for **Session Management & Process Lifecycle** and produced an enriched ticket at `messages/developer/pending/2026-03-08T15:30:00Z-task_planner-enriched-ticket.md`.
+
+**What I added in the technical context:**
+
+- **Relevant files** — Mapped all existing files (`config.py`, `__init__.py`, `test_config.py`) and their relevance, plus the file to create (`session.py`)
+- **Patterns & conventions** — Documented the dataclass, type hint, docstring, and testing patterns established by the existing config module
+- **Dependencies** — `BotConfig` for config values, `asyncio.subprocess` for process management, callback pattern for bot integration
+- **Implementation notes** — Detailed guidance on:
+  - `Session` and `SessionManager` class designs with suggested interfaces
+  - stdout/stderr reading via asyncio tasks
+  - stdin writing pattern (`write()` + `await drain()`)
+  - Idle timeout strategy (cancellable sleep vs polling)
+  - Graceful shutdown sequence with timeout
+  - Crash detection via stdout EOF + returncode check
+  - Session cleanup gotchas
+  - Testing approach using mocked subprocess

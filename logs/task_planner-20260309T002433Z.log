@@ -1,0 +1,3 @@
+Good. I've voted to close the forum topic. The discussion has fully converged on the approach (use `--print --input-format stream-json --output-format stream-json` flags), and the design-change message is already queued for the product_manager to create a ticket. Once that ticket reaches me, I'll enrich it with full technical context from the codebase.
+
+No pending tickets in my queue, so my work for this cycle is complete.

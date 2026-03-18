@@ -1,0 +1,9 @@
+Done. Here's what I did:
+
+**Processed design-change**: `2026-03-08T23:50:00Z-designer-design-change.md` — finalized install script design.
+
+**Created 1 ticket** → Task Planner:
+
+- **Ticket 9: Create `install_telegram_bot.sh` deployment script** — A single, well-scoped ticket covering the entire install script. I kept it as one ticket because it's a single shell script with a unified purpose. The ticket includes 11 detailed requirements (arg parsing, pre-flight checks, file copying with exclusions, generating `run_bot.sh` and `telegram_bot.yaml` with blanked credentials, pip install, post-install output) and 8 QA steps covering happy path, error cases, and correctness verification.
+
+The message has been moved to `done/` and the backlog updated.

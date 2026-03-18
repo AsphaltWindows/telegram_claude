@@ -1,0 +1,3 @@
+**QA Complete — PASS**
+
+All 6 QA steps passed for the `install_telegram_bot.sh` ticket. The automated test suite (31/31 assertions) validates every requirement: argument handling, file copying, credential stripping, path corrections, permissions, overwrite warnings, and post-install messaging. QA report saved to `artifacts/qa/`.

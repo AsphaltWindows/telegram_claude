@@ -1,0 +1,7 @@
+Ticket enriched and delivered. Key technical context added:
+
+- **Identified existing `install_telegram_bot.sh`** at project root — this is a rewrite, not a new file. The existing version uses copy+sed; the new version must generate files via heredocs.
+- **Mapped all source files** — 6 `.py` files to copy, plus `tests/` and `__pycache__/` to exclude.
+- **Extracted exact values** from source files: real bot token (`8727225239:...`), real user ID (`106830816`), shutdown message text, nvm sourcing block, claude_path comment block.
+- **Flagged key differences** from existing script: new `--force` flag, recursive `.py` copy with exclusions (vs flat copy), generate-fresh approach (vs copy+sed).
+- **Provided implementation suggestions**: rsync command for recursive filtered copy, argument parsing pattern for `--force`, heredoc approach for file generation.

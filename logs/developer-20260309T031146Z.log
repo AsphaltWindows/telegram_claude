@@ -1,0 +1,15 @@
+Implementation complete. Here's what I did:
+
+**Created `install_telegram_bot.sh`** at the project root — a self-contained installer that:
+- Validates arguments (usage, directory existence, `pipeline.yaml` presence)
+- Warns on overwrite if `telegram_bot/` already exists
+- Copies `telegram_bot/*.py` files (flat copy naturally excludes `tests/` and `__pycache__/`)
+- Copies and sanitizes `run_bot.sh` (replaces real token → `YOUR_TOKEN_HERE`, fixes `cd` path, removes `PYTHONPATH` export)
+- Copies and sanitizes `telegram_bot.yaml` (replaces real user ID → `000000000`)
+- Includes post-sed grep safety checks to abort if credentials leak through
+- Attempts `pip install` or prints manual instructions
+- Prints clear next-steps instructions
+
+**Created test suite** (`artifacts/developer/tests/test_install_telegram_bot.sh`) with **31 assertions, all passing**, covering every requirement and QA step.
+
+Task-complete message sent to QA.

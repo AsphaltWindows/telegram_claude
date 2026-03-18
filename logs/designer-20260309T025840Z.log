@@ -1,0 +1,1 @@
+Voted to close the forum topic. This is a subprocess infrastructure bug (wrong `cwd` when spawning the Operator agent), already scoped into a ticket by the product manager. No design implications — it doesn't affect requirements or specifications.

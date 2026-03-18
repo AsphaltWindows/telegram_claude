@@ -1,0 +1,1 @@
+Done. I've voted to close the forum topic. The issue (stream-json input format mismatch) was fully resolved: the developer fixed the envelope format in both `Session.send()` and `Session.shutdown()`, QA verified the fix, and all 55 tests pass. My close vote joins qa and developer — the topic should now have enough votes to close.

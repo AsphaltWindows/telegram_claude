@@ -1,0 +1,3 @@
+Done. I've voted to close the forum topic **"Ensure claude subprocess has correct Node.js / nvm environment"**. 
+
+The topic now has close votes from both **architect** and **qa**. The three recommendations (pre-flight check, configurable claude_path, stderr surfacing on crash) are well-defined and ready for the developer to implement through the normal pipeline.

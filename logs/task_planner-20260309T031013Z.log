@@ -1,0 +1,12 @@
+Ticket enriched and delivered. Here's a summary of what I did:
+
+**Processed**: `install_telegram_bot.sh` ticket from Product Manager
+
+**Key technical findings**:
+- The `telegram_bot/` package is flat (6 `.py` files, no sub-packages), so a simple `cp *.py` suffices — no need for recursive find
+- `tests/` is a subdirectory inside `telegram_bot/`, so the flat copy naturally excludes it
+- `run_bot.sh` needs 3 specific `sed` transformations: token blanking (line 8), cd path fix (line 16 — change `$SCRIPT_DIR/../..` to `$SCRIPT_DIR`), and PYTHONPATH removal (line 49)
+- Real credentials identified for stripping: bot token `8727...` and user ID `106830816`
+- `telegram_bot.yaml` has a single user ID entry to replace with placeholder
+
+**Delivered**: Enriched ticket to `messages/developer/pending/` with exact file paths, line numbers, suggested sed commands, and a recommended script structure.

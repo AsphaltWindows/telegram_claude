@@ -1,0 +1,7 @@
+**QA complete for `run_bot.sh` launcher script — all steps PASS.**
+
+- All 12 automated test assertions pass
+- Both script copies are identical and executable
+- Placeholder token rejection, missing file validation, path resolution, and cross-directory execution all work correctly
+- QA report saved to `artifacts/qa/2026-03-08T20:30:00Z-run-bot-launcher-qa-report.md`
+- Message moved to `messages/qa/done/`

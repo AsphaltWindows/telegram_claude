@@ -1,0 +1,11 @@
+Done. Processed the pending ticket:
+
+1. **Forum topic**: Voted to close `2026-03-08T21:00:00Z-operator-claude-cli-stream-json-requires-verbose.md` — the issue is fully diagnosed and already fixed.
+
+2. **Enriched ticket**: Wrote to `messages/developer/pending/2026-03-09T01:15:00Z-task_planner-enriched-ticket.md` with:
+   - Original requirements and QA steps preserved verbatim
+   - Exact file paths and line numbers (`session.py:539-555`, `test_session.py:710-724`)
+   - Coding patterns (how CLI args are structured, how tests mock subprocess calls)
+   - **Key note**: The fix is already applied in the codebase — the developer should verify and run tests rather than making duplicate changes.
+
+3. **Ticket lifecycle**: Moved from `pending/` → `active/` → `done/`.

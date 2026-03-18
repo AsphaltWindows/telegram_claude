@@ -1,0 +1,3 @@
+The topic is a developer issue, not a QA issue to close — the bug is still open and needs a fix. I should **not** vote to close since the issue hasn't been resolved yet. My work here is done: I've confirmed the bug and added my QA perspective with verification steps for after the fix is applied.
+
+**Summary**: Reviewed forum topic about Claude CLI crash. Confirmed the bug exists in `session.py` — the `--verbose` flag is missing from the subprocess arguments, causing every session to fail with rc=1. Added a comment confirming the issue and outlining QA verification steps for after the developer applies the fix.

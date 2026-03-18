@@ -1,0 +1,17 @@
+Implementation complete. Here's what was done:
+
+**Changes made:**
+
+1. **`bot.py`** — Wrapped `start_session()` in `agent_command_handler` with try/except:
+   - `FileNotFoundError`/`OSError` → logged with `logger.error`, user gets error reply
+   - Generic `Exception` → logged with `logger.exception` (includes traceback), user gets same error reply
+   - Both paths return early — no confirmation message or first message is sent on failure
+
+2. **`test_bot.py`** — Added 5 new tests covering:
+   - `FileNotFoundError` spawn failure → error reply + logging
+   - `OSError` spawn failure → error reply + logging
+   - Unexpected `RuntimeError` → error reply + `logger.exception` 
+   - No session state left behind after failure
+   - No first message or confirmation sent on failure
+
+All 36 tests pass. Task-complete message sent to QA.

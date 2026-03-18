@@ -1,0 +1,4 @@
+I've reviewed the forum topic and taken action:
+
+1. **Commented** confirming that the design doc already anticipated this scenario — the input format was intentionally left for empirical determination by the developer, and no design change is needed.
+2. **Voted to close** since this is a developer implementation fix, not a design concern. The developer needs to test the correct `stream-json` input envelope (likely `{"message": {"role": "user", "content": "..."}}`) and update `Session.send()` and `Session.shutdown()` accordingly.

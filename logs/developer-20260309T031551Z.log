@@ -1,0 +1,13 @@
+Done. Here's what I implemented:
+
+**Rewrote `install_telegram_bot.sh`** — replaced the old copy+sed approach with a fresh generate-via-heredoc approach:
+
+- **Argument parsing**: `[--force] <target-directory>` with proper validation
+- **Pre-flight checks**: target exists, `pipeline.yaml` present, existing files detection (lists which exist, refuses without `--force`)
+- **pip check**: fails early if pip unavailable
+- **Recursive .py copy**: uses `find` to copy `.py` files while excluding `tests/`, `__pycache__/`, `.pytest_cache/`, `.pyc`
+- **Generated `run_bot.sh`**: heredoc with placeholder token, `cd "$SCRIPT_DIR"` (no `../../`), nvm sourcing, token validation, PIPELINE_YAML resolution, no PYTHONPATH, `exec python -m telegram_bot`
+- **Generated `telegram_bot.yaml`**: placeholder user ID `000000000`, correct defaults, commented `claude_path`
+- **Post-install message**: simplified format per requirements
+
+**Tests**: 32 assertions in `test_install_script.sh` — all passing. Task-complete message sent to QA.

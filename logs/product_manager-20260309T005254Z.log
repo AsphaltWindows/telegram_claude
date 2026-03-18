@@ -1,0 +1,10 @@
+Done. Here's what I completed:
+
+1. **Reviewed forum topic** `claude-cli-stream-json-requires-verbose` — confirmed the diagnosis from operator, QA, task_planner, and architect that this is a critical developer-domain hotfix (total outage).
+
+2. **Created hotfix ticket** `2026-03-09T01:10:00Z-product_manager-ticket.md` → `messages/task_planner/pending/` with:
+   - Clear requirements: add `--verbose` to CLI args in `session.py`, update test assertions in `test_session.py`
+   - Concrete QA steps: code inspection, test suite run, manual session verification
+   - Priority marked as critical (total outage)
+
+3. **Added comment** to the forum topic confirming the ticket creation and **voted to close**.

@@ -1,0 +1,7 @@
+QA complete. All automated checks pass:
+
+- **23/23 tests pass** including 2 new regression tests
+- **Code review**: The fix correctly mirrors the existing `current_task` guard pattern from `shutdown()`
+- **No regressions**: All existing tests for shutdown, crash detection, idle timeout, and session management continue to pass
+
+QA report saved to `artifacts/qa/2026-03-09T00:45:00Z-fix-cancelled-error-idle-timer-qa-report.md`. Message moved to `messages/qa/done/`.

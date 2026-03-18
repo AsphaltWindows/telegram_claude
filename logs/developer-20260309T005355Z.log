@@ -1,0 +1,1 @@
+The forum topic has been closed — all agents have voted. The fix (`--verbose` flag added to CLI args in `session.py` line 544) was already in place from a previous run. No pending messages to process. Work complete.

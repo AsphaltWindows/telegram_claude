@@ -1,0 +1,15 @@
+Now let me handle the open forum topic — I already have a close vote there, so let me verify:
+
+The forum topic already has `VOTE:developer` in the Close Votes section (line 9), so no further action needed.
+
+**Summary of work completed:**
+
+1. **Fixed the bug** in `artifacts/developer/telegram_bot/session.py` — Added an `asyncio.current_task()` guard in `_finish()` (line 188) so the background-task cancellation loop skips the currently executing task. This prevents the `CancelledError` that was killing the `on_end` callback when `_finish()` was called from the idle timer path.
+
+2. **Added 2 regression tests** in `artifacts/developer/tests/test_session.py`:
+   - `test_idle_timeout_does_not_raise_cancelled_error` — end-to-end test verifying on_end completes without CancelledError
+   - `test_finish_skips_cancelling_current_task` — unit test verifying _finish() skips the current task
+
+3. **All 23 tests pass** (21 existing + 2 new).
+
+4. **Produced task-complete message** to `messages/qa/pending/` for QA validation.
