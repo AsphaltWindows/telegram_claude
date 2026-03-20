@@ -1,43 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load nvm and use a compatible Node version
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-nvm use node > /dev/null 2>&1
-
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PIPELINE="$ROOT_DIR/pipeline.yaml"
 LOCK_DIR="$ROOT_DIR/.locks"
-INTERVAL="${1:-15}"
 
 mkdir -p "$LOCK_DIR"
 
 while true; do
 
-# Parse scheduled agent names from pipeline.yaml (skip agents with scheduled: false)
+# Discover scheduled agents from agents/*/agent.yaml files
+# Skip agents with scheduled: false
 AGENTS=""
-CURRENT_AGENT=""
-IS_SCHEDULED=true
 
-while IFS= read -r line; do
-    if echo "$line" | grep -q '^\s*-\?\s*name:'; then
-        if [ -n "$CURRENT_AGENT" ] && [ "$IS_SCHEDULED" = true ]; then
-            AGENTS="$AGENTS $CURRENT_AGENT"
-        fi
-        CURRENT_AGENT=$(echo "$line" | sed 's/.*name:\s*//' | tr -d ' ')
-        IS_SCHEDULED=true
-    elif echo "$line" | grep -q '^\s*scheduled:\s*false'; then
-        IS_SCHEDULED=false
+for AGENT_YAML in "$ROOT_DIR"/agents/*/agent.yaml; do
+    [ -f "$AGENT_YAML" ] || continue
+    AGENT_DIR_NAME=$(basename "$(dirname "$AGENT_YAML")")
+    # Check if scheduled is explicitly set to false
+    if grep -q '^\s*scheduled:\s*false' "$AGENT_YAML"; then
+        continue
     fi
-done < "$PIPELINE"
-if [ -n "$CURRENT_AGENT" ] && [ "$IS_SCHEDULED" = true ]; then
-    AGENTS="$AGENTS $CURRENT_AGENT"
-fi
+    AGENTS="$AGENTS $AGENT_DIR_NAME"
+done
 
 if [ -z "$AGENTS" ]; then
-    echo "No agents defined in pipeline.yaml"
-    exit 0
+    echo "No scheduled agents found in agents/*/"
+    sleep "$( grep '^\s*scheduler_interval:' "$PIPELINE" | sed 's/.*scheduler_interval:\s*//' | tr -d ' ' )"
+    continue
 fi
 
 for AGENT in $AGENTS; do
@@ -56,30 +45,32 @@ for AGENT in $AGENTS; do
     fi
 
     HAS_WORK=false
-    WORK_TYPE=""
-    WORK_TARGET=""
 
-    # Priority 1: Check forum topics without this agent's close-vote
-    for TOPIC in "$ROOT_DIR"/forum/open/*.md; do
-        [ -f "$TOPIC" ] || continue
-        if ! grep -q "^VOTE:${AGENT}$" "$TOPIC"; then
-            HAS_WORK=true
-            WORK_TYPE="forum"
-            WORK_TARGET="$TOPIC"
-            break
-        fi
-    done
+    # Check if this is a script node (skip forum checks for script nodes)
+    AGENT_SCRIPT_CHECK=$(grep '^\s*script:' "$ROOT_DIR/agents/${AGENT}/agent.yaml" 2>/dev/null || true)
 
-    # Priority 2: Check pending messages
-    if [ "$HAS_WORK" = false ]; then
-        PENDING_DIR="$ROOT_DIR/messages/${AGENT}/pending"
-        if [ -d "$PENDING_DIR" ]; then
-            FIRST_MSG=$(ls -1t "$PENDING_DIR"/*.md 2>/dev/null | tail -1 || true)
-            if [ -n "$FIRST_MSG" ]; then
+    if [ -z "$AGENT_SCRIPT_CHECK" ]; then
+        # Agent node — check forum topics without this agent's close-vote
+        for TOPIC in "$ROOT_DIR"/forum/open/*.md; do
+            [ -f "$TOPIC" ] || continue
+            if ! grep -q "^VOTE:${AGENT}$" "$TOPIC"; then
                 HAS_WORK=true
-                WORK_TYPE="message"
-                WORK_TARGET="$FIRST_MSG"
+                break
             fi
+        done
+    fi
+
+    # Check pending messages across all message-type subdirectories
+    if [ "$HAS_WORK" = false ]; then
+        AGENT_MSG_DIR="$ROOT_DIR/messages/${AGENT}"
+        if [ -d "$AGENT_MSG_DIR" ]; then
+            for TYPE_DIR in "$AGENT_MSG_DIR"/*/pending; do
+                [ -d "$TYPE_DIR" ] || continue
+                if ls "$TYPE_DIR"/*.md &>/dev/null; then
+                    HAS_WORK=true
+                    break
+                fi
+            done
         fi
     fi
 
@@ -88,48 +79,61 @@ for AGENT in $AGENTS; do
         continue
     fi
 
-    echo "[$AGENT] Work found: $WORK_TYPE ($WORK_TARGET)"
+    echo "[$AGENT] Work found, launching."
 
-    # Verify agent prompt exists in .claude/agents/
-    PROMPT_FILE="$ROOT_DIR/.claude/agents/${AGENT}.md"
+    # Read agent type and check for script runner
+    AGENT_YAML="$ROOT_DIR/agents/${AGENT}/agent.yaml"
+    AGENT_TYPE=$(grep '^\s*type:' "$AGENT_YAML" | sed 's/.*type:\s*//' | tr -d ' ' || true)
+    AGENT_SCRIPT=$(grep '^\s*script:' "$AGENT_YAML" 2>/dev/null | sed 's/.*script:\s*//' | tr -d ' ' || true)
 
-    if [ ! -f "$PROMPT_FILE" ]; then
-        echo "[$AGENT] No .claude/agents/${AGENT}.md found, skipping."
-        continue
-    fi
+    if [ -n "$AGENT_SCRIPT" ]; then
+        # Script-based node — run the script directly
+        SCRIPT_PATH="$ROOT_DIR/$AGENT_SCRIPT"
 
-    LOG_DIR="$ROOT_DIR/logs"
-    mkdir -p "$LOG_DIR"
-    LOG_FILE="$LOG_DIR/${AGENT}-$(date -u +%Y%m%dT%H%M%SZ).log"
+        if [ ! -f "$SCRIPT_PATH" ]; then
+            echo "[$AGENT] Script not found: $AGENT_SCRIPT, skipping."
+            continue
+        fi
 
-    # Build the prompt based on work type
-    if [ "$WORK_TYPE" = "forum" ]; then
-        WORK_PROMPT="You have been launched by the scheduler. You have a forum topic to review: $WORK_TARGET"
+        if [ ! -x "$SCRIPT_PATH" ]; then
+            echo "[$AGENT] Script not executable: $AGENT_SCRIPT, skipping."
+            continue
+        fi
+
+        # Launch script in background
+        (
+            echo "$BASHPID" > "$LOCK_FILE"
+            echo "[$AGENT] Launching script (type: $AGENT_TYPE): $AGENT_SCRIPT"
+            "$SCRIPT_PATH" "$ROOT_DIR" "$AGENT"
+            rm -f "$LOCK_FILE"
+        ) &
     else
-        WORK_PROMPT="You have been launched by the scheduler. You have a pending message to process: $WORK_TARGET"
+        # LLM-based agent — use Claude Code prompt file
+        PROMPT_FILE="$ROOT_DIR/.claude/agents/${AGENT}.md"
+
+        if [ ! -f "$PROMPT_FILE" ]; then
+            echo "[$AGENT] No .claude/agents/${AGENT}.md found, skipping."
+            continue
+        fi
+
+        # Launch agent in background
+        (
+            echo "$BASHPID" > "$LOCK_FILE"
+
+            echo "[$AGENT] Launching (type: $AGENT_TYPE)..."
+
+            claude -p "You have been launched by the scheduler in non-interactive mode. Find and process your work, then exit." \
+                --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
+                --agent "$AGENT"
+
+            rm -f "$LOCK_FILE"
+        ) &
     fi
-
-    # Launch agent in background
-    (
-        echo "$BASHPID" > "$LOCK_FILE"
-
-        echo "[$AGENT] Launching (work: $WORK_TYPE)..."
-
-        claude -p \
-            --agent "$AGENT" \
-            --dangerously-skip-permissions \
-            "$WORK_PROMPT" \
-            >> "$LOG_FILE" 2>&1
-
-        EXIT_CODE=$?
-        echo "[$AGENT] Finished with exit code $EXIT_CODE (log: $LOG_FILE)"
-
-        rm -f "$LOCK_FILE"
-    ) &
 
 done
 
-echo "Scheduler pass complete. Sleeping ${INTERVAL}s..."
+echo "Scheduler pass complete."
+INTERVAL=$(grep '^\s*scheduler_interval:' "$PIPELINE" | sed 's/.*scheduler_interval:\s*//' | tr -d ' ')
+INTERVAL="${INTERVAL:-20}"
 sleep "$INTERVAL"
-
 done

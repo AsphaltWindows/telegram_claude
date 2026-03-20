@@ -1,18 +1,21 @@
 name: developer
 type: processing
+scheduled: true
+close_vote_required: true
 description: |
   The Developer receives enriched tickets from the Task Planner and implements them.
   It writes code and tests following best practices. Its artifact is the codebase itself.
-  Upon completing a ticket, it sends a task-complete message to the QA agent.
+  Upon completing a ticket, it sends a task_complete message to the QA agent.
 
 consumes:
-  - type: enriched-ticket
+  - type: enriched_ticket
     priority: 1
     from: task_planner
 
 produces:
-  - type: task-complete
-    description: Notification that a ticket has been implemented, with summary of changes, sent to qa
+  - type: task_complete
+    to: [qa]
+    description: Notification that a ticket has been implemented, with summary of changes
 
 artifacts:
   - type: codebase
@@ -23,8 +26,8 @@ interactive_mode: |
   to refactor or adjust its approach.
 
 non_interactive_mode: |
-  Processes one unit of work (forum topic or enriched-ticket message):
+  Processes one unit of work (forum topic or enriched_ticket message):
   1. Reads the enriched ticket from task_planner
   2. Implements the requirements — writes code and tests
   3. Follows best practices (clean code, proper error handling, test coverage)
-  4. Sends a task-complete message to qa summarizing what was done
+  4. Sends a task_complete message to qa summarizing what was done

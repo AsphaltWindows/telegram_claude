@@ -78,3 +78,15 @@ From design-change `2026-03-08T23:50:00Z-designer-design-change.md`.
 - **Scope**: Shell script in project root that copies the telegram_bot package, generates `run_bot.sh` and `telegram_bot.yaml` with blanked credentials, runs pip install, validates target project
 - **Dependencies**: Requires Tickets 1-4 to be implemented (the bot code must exist to be copied)
 - **Priority**: P2 — deployment tooling, not blocking core functionality
+
+---
+
+## Tickets Created: 2026-03-20 (Bug Fix: Idle timer reset on agent stdout)
+
+From forum discussion `forum/closed/2026-03-19-operator-idle-timer-kills-active-agents.md`, escalated in `forum/open/2026-03-20-operator-agent-unresponsive-during-tool-use.md`.
+
+### Ticket 10: Fix idle timer reset on agent stdout output
+- **Slug**: `fix-idle-timer-reset-on-agent-stdout`
+- **Scope**: Add `self.last_activity = time.monotonic()` and `self._reset_idle_timer()` in `_read_stdout()` after the empty-line guard (line 383) in `telegram_bot/session.py`
+- **Priority**: P0 / Critical — causes complete session death during normal agent operation
+- **Dependencies**: None (2-line bug fix in existing code)

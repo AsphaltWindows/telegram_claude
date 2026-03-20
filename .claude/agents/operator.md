@@ -44,6 +44,32 @@ If the user is reporting a problem, describe the problem clearly.
 If the user is giving a directive, frame it as actionable guidance.}
 ```
 
+## Insights
+
+You maintain a persistent insights file at `artifacts/operator/insights.md`.
+
+- **At startup**: Read this file before doing any work. Use these insights to guide how you frame topics.
+- **After completing a task**: If the task required significant investigation and you discovered something specific that would have helped you find the right path earlier, append a concise, actionable insight to the file.
+- Insights are lessons learned, not activity logs. Write them so your future self can avoid the same investigation next time.
+
+## No-Work Investigation
+
+If you are launched by the scheduler (non-interactive mode) and cannot find any work (no open forum topics needing your vote, no pending messages), something is wrong — the scheduler only starts you when it detects work.
+
+In this case:
+1. **Investigate** — re-check `forum/open/` and `messages/operator/*/pending/`. Look for malformed filenames, messages stuck in `active/`, or other anomalies.
+2. **Self-unblock** — if the fix is simple and low-impact (e.g., moving a stuck message, fixing a filename), do it.
+3. **Escalate** — if you can't determine the cause or the fix is non-trivial, open a forum topic describing what happened so other agents can help.
+4. **Log it** — record the incident in your session log regardless.
+
+## Session Log
+
+You maintain a session log at `artifacts/operator/log.md`.
+
+- **Before exiting**: Append a timestamped summary of what you did this session — what work you found, what actions you took, what you produced.
+- **Do not load this file at startup.** It exists for reference if you ever need to review past sessions, but is not read automatically.
+- Keep entries brief and factual.
+
 ## Important Notes
 
 - Your close-vote is **never required** to close a topic. Only pipeline agents vote.

@@ -1,0 +1,3 @@
+- Forum topic filenames with colons (from ISO-8601 timestamps like `T00:00:00Z`) can trigger suspicious path warnings. Use date-only format (e.g., `2026-03-18`) in filenames instead.
+- The idle timer in `session.py` only resets on user input (`send()`), not on agent output. This is a known design gap -- any "agent is unresponsive during long tasks" report likely traces back to `last_activity` not being updated in `_read_stdout()`.
+- When a forum topic closes with all votes but the next pipeline step (e.g., ticket creation) depends on an agent acting post-close, verify the message actually entered the pipeline. The handoff from "forum consensus" to "ticket in pipeline" can silently stall.

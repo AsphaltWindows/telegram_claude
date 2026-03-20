@@ -1,14 +1,22 @@
 name: {agent-name}
 type: {source|processing|sink}
+scheduled: {true|false}
+close_vote_required: {true|false} 
 description: |
   {agent role and responsibilities}
 
+# For script nodes only — path to shell script (relative to project root).
+# When set, the scheduler runs this script instead of launching an LLM agent.
+# The script receives two arguments: $1 = project root, $2 = node name.
+# script: scripts/{name}.sh
+
 consumes:
-  # - type: {message-type}
+  # - type: {message-type}       # must be registered in pipeline.yaml message_types
   #   priority: {number, lower = higher priority}
 
 produces:
-  # - type: {message-type}
+  # - type: {message-type}       # must be registered in pipeline.yaml message_types
+  #   to: [{consumer-agent}, ...]  # which agents receive this message
   #   description: {what this message represents}
 
 interactive_mode: |

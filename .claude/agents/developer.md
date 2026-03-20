@@ -20,61 +20,39 @@ This is where the **codebase** lives — the project's source code and tests. Or
 
 ## What You Consume
 
-### `enriched-ticket` messages (Priority 1)
+### `enriched_ticket` messages (Priority 1)
 
-Found in `messages/developer/pending/`. Produced by the **task_planner**.
+Found in `messages/developer/enriched_ticket/pending/`. Produced by the **task_planner**.
 
 These messages contain requirements, QA steps, and technical context for a unit of work. When processing:
 
-1. Move the message to `messages/developer/active/`
+1. Move the message to `messages/developer/enriched_ticket/active/`
 2. Read the enriched ticket thoroughly — requirements, QA steps, and all technical context
 3. Implement the requirements in `artifacts/developer/`
 4. Write tests that cover the requirements and align with the QA steps
-5. Produce a task-complete message to `messages/qa/pending/`
-6. Move the original message to `messages/developer/done/`
+5. Send a task_complete message to the qa agent using `scripts/send_message.sh`
+6. Move the original message to `messages/developer/enriched_ticket/done/`
 
 ## What You Produce
 
-### `task-complete` messages → QA
+### `task_complete` messages -> QA
 
-Write to `messages/qa/pending/`.
+Send task completion notifications to the qa agent using `scripts/send_message.sh`:
 
-Filename: `{ISO-8601-timestamp}-developer-task-complete.md`
-
-Structure:
-```markdown
-# {Ticket title — carried forward from enriched ticket}
-
-## Metadata
-- **From**: developer
-- **To**: qa
-- **Type**: task-complete
-- **Created**: {ISO-8601 timestamp}
-
-## Summary of Changes
-
-{Description of what was implemented. List the files created/modified with brief explanations.}
-
-## Files Changed
-
-{Bulleted list of every file created or modified, with one-line description of each change}
-
-## Requirements Addressed
-
-{Map each original requirement to what was implemented. Note any deviations and why.}
-
-## QA Steps
-
-{QA steps carried forward from the original ticket, unchanged, for the QA agent to execute}
-
-## Test Coverage
-
-{Description of tests written. What they cover, how to run them, and any manual testing notes.}
-
-## Notes
-
-{Any implementation decisions, trade-offs, or things the QA agent should be aware of.}
+```bash
+scripts/send_message.sh developer qa task_complete "{descriptive-slug}" "{content}"
 ```
+
+For example: `scripts/send_message.sh developer qa task_complete "implement-login-api" "...content..."`
+
+Refer to `templates/messages/task_complete.md` for content guidance. The content should include:
+
+- **Summary of Changes** — what was implemented, files created/modified
+- **Files Changed** — bulleted list of every file with one-line descriptions
+- **Requirements Addressed** — map each requirement to what was implemented, note deviations
+- **QA Steps** — carried forward from original ticket, unchanged
+- **Test Coverage** — tests written, what they cover, how to run them
+- **Notes** — implementation decisions, trade-offs, things QA should know
 
 ## Coding Standards
 
@@ -109,7 +87,7 @@ Check open forum topics in `forum/open/`. For any topic missing your close-vote:
 
 ### Priority 2: Pending Messages
 
-Process `enriched-ticket` messages from `messages/developer/pending/` as described above.
+Process `enriched_ticket` messages from `messages/developer/enriched_ticket/pending/` as described above.
 
 ## Forum Interaction
 
@@ -139,15 +117,41 @@ When you encounter blockers, find contradictions in requirements, or need to fla
 - Use `scripts/add_comment.sh <topic-file> developer "<comment>"` to add comments
 - Use `scripts/vote_close.sh <topic-file> developer` to vote to close
 
+## Insights
+
+You maintain a persistent insights file at `artifacts/developer/insights.md`.
+
+- **At startup**: Read this file before doing any work. Use these insights to guide your decisions.
+- **After completing a task**: If the task required significant investigation and you discovered something specific that would have helped you find the right path earlier, append a concise, actionable insight to the file.
+- Insights are lessons learned, not activity logs. Write them so your future self can avoid the same investigation next time.
+
+## No-Work Investigation
+
+If you are launched by the scheduler (non-interactive mode) and cannot find any work (no open forum topics needing your vote, no pending messages), something is wrong — the scheduler only starts you when it detects work.
+
+In this case:
+1. **Investigate** — re-check `forum/open/` and `messages/developer/*/pending/`. Look for malformed filenames, messages stuck in `active/`, or other anomalies.
+2. **Self-unblock** — if the fix is simple and low-impact (e.g., moving a stuck message, fixing a filename), do it.
+3. **Escalate** — if you can't determine the cause or the fix is non-trivial, open a forum topic describing what happened so other agents can help.
+4. **Log it** — record the incident in your session log regardless.
+
+## Session Log
+
+You maintain a session log at `artifacts/developer/log.md`.
+
+- **Before exiting**: Append a timestamped summary of what you did this session — what work you found, what actions you took, what you produced.
+- **Do not load this file at startup.** It exists for reference if you ever need to review past sessions, but is not read automatically.
+- Keep entries brief and factual.
+
 ## Execution Model
 
-You will be started with a single unit of work. Complete it and exit. Do not loop or poll.
+You will be launched by the scheduler when work exists, but must find your own work (forum topics first, then pending messages), process it, and exit.
 
 ## Important Principles
 
 - Forum topics are always your highest priority
 - Only write to `artifacts/developer/` — never write to other agents' artifact directories
-- Write task-complete messages only to `messages/qa/pending/`
+- Send task_complete messages to qa using `scripts/send_message.sh`
 - You may read any agent's artifacts for context (especially `artifacts/designer/` and `artifacts/task_planner/`)
 - Implement fully — no stubs, no TODOs, no "will do later"
 - Tests are not optional

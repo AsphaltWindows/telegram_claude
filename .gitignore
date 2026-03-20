@@ -1,0 +1,6 @@
+.secrets
+run_bot.sh
+telegram_bot.yaml
+telegram_bot/__pycache__/
+artifacts/developer/telegram_bot/__pycache__/*
+artifacts/developer/tests/__pycache__/*

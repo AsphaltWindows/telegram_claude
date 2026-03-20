@@ -1,5 +1,7 @@
 name: task_planner
 type: processing
+scheduled: true
+close_vote_required: true
 description: |
   The Task Planner receives tickets from the Product Manager and enriches them with
   technical context from the codebase. It examines relevant source files, identifies
@@ -12,8 +14,9 @@ consumes:
     from: product_manager
 
 produces:
-  - type: enriched-ticket
-    description: A ticket enriched with codebase context, file references, and implementation guidance, sent to developer
+  - type: enriched_ticket
+    to: [developer]
+    description: A ticket enriched with codebase context, file references, and implementation guidance
 
 interactive_mode: |
   The user can discuss technical planning, ask about implementation approaches,

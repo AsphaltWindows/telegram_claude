@@ -636,6 +636,134 @@ class TestSessionIdleTimeout:
         on_end.assert_called_once_with(100, "test-agent", "test", stderr_tail="")
 
     @pytest.mark.asyncio
+    async def test_stdout_output_resets_idle_timer(self) -> None:
+        """Agent stdout output should reset the idle timer, preventing timeout.
+
+        This is the core test for the fix: _read_stdout() must call
+        self.last_activity = time.monotonic() and self._reset_idle_timer()
+        for every non-empty stdout line.
+        """
+        on_end = AsyncMock()
+
+        # We'll feed stdout lines at timed intervals using a custom readline.
+        # The idle timeout is 1s. We send a stdout line at 0.7s, which should
+        # reset the timer. Without the fix, the session would die at 1s.
+        lines_delivered = 0
+
+        async def _timed_stdout_readline():
+            nonlocal lines_delivered
+            if lines_delivered == 0:
+                # First line delivered after 0.7s
+                await asyncio.sleep(0.7)
+                lines_delivered += 1
+                event = {"type": "tool_use", "name": "bash", "input": {"cmd": "ls"}}
+                return json.dumps(event).encode() + b"\n"
+            else:
+                # Then hang forever (no more output)
+                await asyncio.sleep(9999)
+                return b""
+
+        process = _make_mock_process(block_stdout=True)
+        process.stdout.readline = _timed_stdout_readline
+
+        session = _make_session(
+            process=process,
+            on_end=on_end,
+            idle_timeout=1,
+        )
+        session.start()
+
+        # At 1.0s the session should NOT have timed out (timer reset at 0.7s).
+        await asyncio.sleep(1.0)
+        on_end.assert_not_called()
+
+        # At ~1.8s (0.7 + 1.0 + buffer) it should have timed out.
+        await asyncio.sleep(0.9)
+        on_end.assert_called_once_with(100, "test-agent", "timeout", stderr_tail="")
+
+    @pytest.mark.asyncio
+    async def test_stdout_updates_last_activity(self) -> None:
+        """Assistant text events on stdout should also reset the idle timer.
+
+        This complements test_stdout_output_resets_idle_timer (which uses
+        tool_use events) by verifying that text-producing assistant events
+        also reset the timer.
+        """
+        on_end = AsyncMock()
+        lines_delivered = 0
+
+        async def _timed_stdout_readline():
+            nonlocal lines_delivered
+            if lines_delivered == 0:
+                await asyncio.sleep(0.7)
+                lines_delivered += 1
+                event = _make_assistant_event("Hello from agent")
+                return json.dumps(event).encode() + b"\n"
+            else:
+                await asyncio.sleep(9999)
+                return b""
+
+        process = _make_mock_process(block_stdout=True)
+        process.stdout.readline = _timed_stdout_readline
+
+        session = _make_session(
+            process=process,
+            on_end=on_end,
+            idle_timeout=1,
+        )
+        session.start()
+
+        # At 1.0s: stdout event at 0.7s should have reset the timer.
+        # Without the fix, timeout would fire at 1.0s.
+        await asyncio.sleep(1.0)
+        on_end.assert_not_called()
+
+        # At ~1.9s (0.7 + 1.0 + buffer) it should have timed out.
+        await asyncio.sleep(0.9)
+        on_end.assert_called_once_with(100, "test-agent", "timeout", stderr_tail="")
+
+    @pytest.mark.asyncio
+    async def test_non_text_stdout_events_reset_idle_timer(self) -> None:
+        """Non-text events (tool_use, system) should also reset the idle timer.
+
+        The fix resets the timer for ALL non-empty stdout lines, not just
+        those that produce user-visible text.  Uses a single tool_use event
+        (no user-visible text) to verify the timer resets.
+        """
+        on_end = AsyncMock()
+        lines_delivered = 0
+
+        async def _timed_stdout_readline():
+            nonlocal lines_delivered
+            if lines_delivered == 0:
+                await asyncio.sleep(0.7)
+                lines_delivered += 1
+                # tool_use event — produces no user-visible text
+                event = {"type": "tool_use", "name": "Read", "input": {"path": "/tmp/x"}}
+                return json.dumps(event).encode() + b"\n"
+            else:
+                await asyncio.sleep(9999)
+                return b""
+
+        process = _make_mock_process(block_stdout=True)
+        process.stdout.readline = _timed_stdout_readline
+
+        session = _make_session(
+            process=process,
+            on_end=on_end,
+            idle_timeout=1,
+        )
+        session.start()
+
+        # At 1.0s: timer was reset at 0.7s by tool_use event, should not have timed out
+        await asyncio.sleep(1.0)
+        on_end.assert_not_called()
+
+        # At ~1.9s: 0.7 + 1.0 + buffer → should have timed out
+        await asyncio.sleep(0.9)
+        on_end.assert_called_once_with(100, "test-agent", "timeout", stderr_tail="")
+
+    @pytest.mark.asyncio
     async def test_activity_resets_idle_timer(self) -> None:
         """Sending a message should reset the idle timer."""
         on_end = AsyncMock()

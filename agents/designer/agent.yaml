@@ -1,5 +1,7 @@
 name: designer
 type: source
+scheduled: true
+close_vote_required: true
 description: |
   The Designer is the requirements gatherer and technical writer. In interactive mode,
   the user communicates ideas, goals, and constraints, and the Designer captures them
@@ -10,8 +12,9 @@ description: |
 consumes: []
 
 produces:
-  - type: design-change
-    description: Notification of design changes with motivations and file references, sent to product_manager
+  - type: design_change
+    to: [product_manager]
+    description: Notification of design changes with motivations and file references
 
 artifacts:
   - type: design

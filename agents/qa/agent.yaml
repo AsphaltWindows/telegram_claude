@@ -1,13 +1,15 @@
 name: qa
 type: sink
+scheduled: true
+close_vote_required: true
 description: |
-  The QA agent is a sink that receives task-complete messages from the Developer.
+  The QA agent is a sink that receives task_complete messages from the Developer.
   In interactive mode, it guides the user through the QA process for each completed ticket,
   walking through the QA steps defined in the original ticket. In non-interactive mode,
   it processes forum topics.
 
 consumes:
-  - type: task-complete
+  - type: task_complete
     priority: 1
     from: developer
 
@@ -15,7 +17,7 @@ produces: []
 
 interactive_mode: |
   The user works with QA to validate completed tickets:
-  1. QA presents the task-complete message and the QA steps from the original ticket
+  1. QA presents the task_complete message and the QA steps from the original ticket
   2. Guides the user through each QA step
   3. Records pass/fail for each step
   4. If issues are found, creates a forum topic for the relevant agents

@@ -1,3 +1,26 @@
+scheduler_interval: 20
+
+message_types:
+  - name: design_change
+    description: Notification of design changes with motivations and file references
+    template: templates/messages/design_change.md
+
+  - name: ticket
+    description: A single actionable ticket with requirements and QA steps
+    template: templates/messages/ticket.md
+
+  - name: enriched_ticket
+    description: A ticket enriched with codebase context and implementation guidance
+    template: templates/messages/enriched_ticket.md
+
+  - name: task_complete
+    description: Notification that a ticket was implemented with summary of changes
+    template: templates/messages/task_complete.md
+
+  - name: agent_update
+    description: Notification that a new agent was added or modified
+    template: templates/messages/agent_update.md
+
 agents:
   - name: operator
     type: source
@@ -8,52 +31,69 @@ agents:
 
   - name: architect
     type: source
+    scheduled: false
+    close_vote_required: false
     consumes: []
     produces:
-      - type: agent-update
+      - type: agent_update
+        to: []
         description: Notification that a new agent was added or modified
 
   - name: designer
     type: source
+    scheduled: true
+    close_vote_required: true
     consumes: []
     produces:
-      - type: design-change
-        description: Notification of design changes with motivations and file references, sent to product_manager
+      - type: design_change
+        to: [product_manager]
+        description: Notification of design changes with motivations and file references
 
   - name: product_manager
     type: processing
+    scheduled: true
+    close_vote_required: true
     consumes:
-      - type: design-change
+      - type: design_change
         priority: 1
         from: designer
     produces:
       - type: ticket
-        description: A single actionable ticket with requirements and QA steps, sent to task_planner
+        to: [task_planner]
+        description: A single actionable ticket with requirements and QA steps
 
   - name: task_planner
     type: processing
+    scheduled: true
+    close_vote_required: true
     consumes:
       - type: ticket
         priority: 1
         from: product_manager
     produces:
-      - type: enriched-ticket
-        description: A ticket enriched with codebase context, sent to developer
+      - type: enriched_ticket
+        to: [developer]
+        description: A ticket enriched with codebase context and implementation guidance
 
   - name: developer
     type: processing
+    scheduled: true
+    close_vote_required: true
     consumes:
-      - type: enriched-ticket
+      - type: enriched_ticket
         priority: 1
         from: task_planner
     produces:
-      - type: task-complete
-        description: Notification that a ticket was implemented, sent to qa
+      - type: task_complete
+        to: [qa]
+        description: Notification that a ticket was implemented with summary of changes
 
   - name: qa
     type: sink
+    scheduled: true
+    close_vote_required: true
     consumes:
-      - type: task-complete
+      - type: task_complete
         priority: 1
         from: developer
     produces: []

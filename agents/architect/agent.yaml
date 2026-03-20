@@ -1,5 +1,7 @@
 name: architect
 type: source
+scheduled: false
+close_vote_required: false
 description: |
   The Architect is the meta-agent responsible for designing and maintaining the agent pipeline itself.
   It creates new agent definitions, updates the pipeline configuration, maintains the scheduler script,
@@ -8,15 +10,16 @@ description: |
 consumes: []
 
 produces:
-  - type: agent-update
+  - type: agent_update
+    to: []
     description: Notification that a new agent was added or an existing agent was modified
 
 interactive_mode: |
   The user describes a new agent or modification to an existing agent. The Architect:
   1. Gathers the agent specification (name, type, description, consumes, produces, modes)
   2. Creates/updates the agent definition (agents/{name}/agent.yaml)
-  3. Generates the agent's system prompt (agents/{name}/prompt.md)
-  4. Creates the agent's directory structure (artifacts/{name}/, messages/{name}/pending|active|done/)
+  3. Generates the agent's system prompt (.claude/agents/{name}.md)
+  4. Creates the agent's directory structure (artifacts/{name}/, messages/{name}/{type}/pending|active|done/ for each consumed type)
   5. Updates pipeline.yaml with the new agent
   6. Regenerates run_scheduler.sh if needed
 
