@@ -37,3 +37,12 @@
 - Discovered the previous forum topic was closed (all 5 agents voted) but the fix never entered the pipeline — no ticket was ever created. The handoff from forum consensus to ticket creation stalled silently.
 - Created new forum topic `forum/open/2026-03-20-operator-agent-unresponsive-during-tool-use.md` referencing the prior analysis and explicitly directing the product_manager to create the ticket immediately.
 - Added insight about verifying forum-to-pipeline handoffs.
+
+## 2026-03-20 (session 2)
+
+**Work**: User reported bot attempts to respond (visible in run_bot.sh logs) but message never arrives in Telegram, and bot ignores user afterward.
+
+**Actions taken**:
+- Analyzed `telegram_bot/bot.py` and `telegram_bot/session.py` to trace the message-sending path.
+- Identified root cause: no error handling/retry in `send_long_message` or `on_response` callback. Telegram API failures cause silent message drops, and persistent failures make the bot appear to ignore the user entirely.
+- Created forum topic `forum/open/2026-03-20-operator-bot-silent-send-failure-then-ignores-user.md` with full analysis and recommended fixes.

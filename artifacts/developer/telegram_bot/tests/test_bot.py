@@ -8,6 +8,8 @@ from mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from telegram.error import BadRequest, Forbidden, NetworkError, RetryAfter, TimedOut
+
 from telegram_bot.bot import (
     _check_claude_cli,
     agent_command_handler,
@@ -15,6 +17,7 @@ from telegram_bot.bot import (
     end_handler,
     help_handler,
     plain_text_handler,
+    retry_send_message,
     send_long_message,
     split_message,
 )
@@ -794,3 +797,589 @@ class TestOnEndWithStderr:
         sent_text = bot.send_message.call_args.kwargs["text"]
         assert "ended" in sent_text.lower()
         assert "Diagnostics" not in sent_text
+
+
+# ---------------------------------------------------------------------------
+# retry_send_message tests
+# ---------------------------------------------------------------------------
+
+
+class TestRetrySendMessage:
+    """Tests for the retry_send_message wrapper."""
+
+    @pytest.mark.asyncio
+    async def test_successful_send_no_retry(self):
+        """Message sent on first attempt — no sleep, returns True."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await retry_send_message(bot, 123, "hello")
+
+        assert result is True
+        assert bot.send_message.call_count == 1
+        bot.send_message.assert_called_once_with(chat_id=123, text="hello")
+        mock_sleep.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_retry_then_succeed(self):
+        """TimedOut on first attempt, success on second — sleeps 1s."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(
+            side_effect=[TimedOut(), None]
+        )
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await retry_send_message(bot, 123, "hello")
+
+        assert result is True
+        assert bot.send_message.call_count == 2
+        mock_sleep.assert_called_once_with(1)
+
+    @pytest.mark.asyncio
+    async def test_all_retries_exhausted(self):
+        """NetworkError on all 3 attempts — returns False, no exception raised."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(
+            side_effect=[NetworkError("err"), NetworkError("err"), NetworkError("err")]
+        )
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await retry_send_message(bot, 123, "hello")
+
+        assert result is False
+        assert bot.send_message.call_count == 3
+        # Exponential backoff: 1s after first failure, 2s after second
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_any_call(1)
+        mock_sleep.assert_any_call(2)
+
+    @pytest.mark.asyncio
+    async def test_non_retryable_bad_request(self):
+        """BadRequest — exactly 1 call, no retries, returns False."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(
+            side_effect=BadRequest("bad request")
+        )
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await retry_send_message(bot, 123, "hello")
+
+        assert result is False
+        assert bot.send_message.call_count == 1
+        mock_sleep.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_non_retryable_forbidden(self):
+        """Forbidden — exactly 1 call, no retries, returns False."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(
+            side_effect=Forbidden("forbidden")
+        )
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await retry_send_message(bot, 123, "hello")
+
+        assert result is False
+        assert bot.send_message.call_count == 1
+        mock_sleep.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_retry_after_uses_server_value(self):
+        """RetryAfter — uses server-provided retry_after for sleep, not standard backoff."""
+        bot = MagicMock()
+        exc = RetryAfter(10)
+        bot.send_message = AsyncMock(
+            side_effect=[exc, None]
+        )
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            result = await retry_send_message(bot, 123, "hello")
+
+        assert result is True
+        assert bot.send_message.call_count == 2
+        mock_sleep.assert_called_once_with(10)
+
+    @pytest.mark.asyncio
+    async def test_logging_on_exhausted_retries(self):
+        """All attempts fail — logs include exception type, chat_id, msg_len, attempt, and content."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(
+            side_effect=[NetworkError("err"), NetworkError("err"), NetworkError("err")]
+        )
+
+        message_text = "A" * 300  # longer than 200 to test truncation
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock):
+            with patch("telegram_bot.bot.logger") as mock_logger:
+                result = await retry_send_message(bot, 456, message_text)
+
+        assert result is False
+
+        # Collect all error log calls
+        error_calls = mock_logger.error.call_args_list
+
+        # Should have 3 per-attempt logs + 1 final exhaustion log = 4 total
+        assert len(error_calls) == 4
+
+        # Check per-attempt logs contain required info
+        for i, call in enumerate(error_calls[:3]):
+            log_msg = call[0][0] % tuple(call[0][1:])
+            assert "NetworkError" in log_msg
+            assert "456" in log_msg
+            assert str(len(message_text)) in log_msg
+            assert f"attempt {i + 1}/3" in log_msg.lower()
+
+        # Check final exhaustion log includes truncated content
+        final_msg = error_calls[3][0][0] % tuple(error_calls[3][0][1:])
+        assert "456" in final_msg
+        assert "A" * 200 in final_msg
+        # Content should be truncated — not the full 300 chars
+        assert "A" * 300 not in final_msg
+
+    @pytest.mark.asyncio
+    async def test_logging_no_content_on_non_final_failure(self):
+        """First attempt fails, second succeeds — log for attempt 1 does NOT include content."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(
+            side_effect=[TimedOut(), None]
+        )
+
+        message_text = "secret message content"
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock):
+            with patch("telegram_bot.bot.logger") as mock_logger:
+                result = await retry_send_message(bot, 789, message_text)
+
+        assert result is True
+
+        # Should have exactly 1 error log (the failed attempt)
+        error_calls = mock_logger.error.call_args_list
+        assert len(error_calls) == 1
+
+        # That log should NOT include message content
+        log_msg = error_calls[0][0][0] % tuple(error_calls[0][0][1:])
+        assert "secret message content" not in log_msg
+
+    @pytest.mark.asyncio
+    async def test_returns_true_on_success(self):
+        """Verify explicit True return on success."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+
+        result = await retry_send_message(bot, 123, "hello")
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_returns_false_on_all_failures(self):
+        """Verify explicit False return when all retries exhausted."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(
+            side_effect=[TimedOut(), TimedOut(), TimedOut()]
+        )
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock):
+            result = await retry_send_message(bot, 123, "hello")
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_no_exception_propagates(self):
+        """Errors are caught — no exception propagates to caller."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(
+            side_effect=[NetworkError("err"), NetworkError("err"), NetworkError("err")]
+        )
+
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock):
+            # Should NOT raise
+            result = await retry_send_message(bot, 123, "hello")
+
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+# send_long_message integration with retry tests
+# ---------------------------------------------------------------------------
+
+
+class TestSendLongMessageWithRetry:
+    """Tests verifying send_long_message uses retry_send_message."""
+
+    @pytest.mark.asyncio
+    async def test_uses_retry_for_each_chunk(self):
+        """Each chunk goes through retry_send_message."""
+        with patch(
+            "telegram_bot.bot.retry_send_message",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_retry:
+            text = ("a" * 4000) + "\n\n" + ("b" * 4000)
+            result = await send_long_message(MagicMock(), 123, text)
+
+        assert result is True
+        assert mock_retry.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_returns_false_if_any_chunk_fails(self):
+        """If one chunk fails, returns False but still sends remaining chunks."""
+        with patch(
+            "telegram_bot.bot.retry_send_message",
+            new_callable=AsyncMock,
+            side_effect=[True, False],
+        ) as mock_retry:
+            text = ("a" * 4000) + "\n\n" + ("b" * 4000)
+            result = await send_long_message(MagicMock(), 123, text)
+
+        assert result is False
+        # Both chunks should still be attempted
+        assert mock_retry.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_returns_true_if_all_chunks_succeed(self):
+        """All chunks succeed — returns True."""
+        with patch(
+            "telegram_bot.bot.retry_send_message",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            result = await send_long_message(MagicMock(), 123, "short message")
+
+        assert result is True
+
+
+# ---------------------------------------------------------------------------
+# Circuit breaker tests
+# ---------------------------------------------------------------------------
+
+
+class TestCircuitBreakerCounterReset:
+    """QA step 1: counter resets on success after consecutive failures."""
+
+    @pytest.mark.asyncio
+    async def test_counter_resets_on_success(self):
+        """4 consecutive failures then 1 success — session NOT ended."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        # Simulate 4 failures via send_long_message returning False
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False):
+            for _ in range(4):
+                await on_response(100, "msg")
+
+        # Then 1 success
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=True):
+            await on_response(100, "msg")
+
+        # Session should NOT have been ended
+        sm.end_session.assert_not_called()
+
+
+class TestCircuitBreakerTriggersAt5:
+    """QA step 2: circuit breaker triggers at exactly 5 consecutive failures."""
+
+    @pytest.mark.asyncio
+    async def test_triggers_at_5_failures(self):
+        """Exactly 5 consecutive failures — session ended, ERROR logged."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False):
+            with patch("telegram_bot.bot.retry_send_message", new_callable=AsyncMock, return_value=True):
+                with patch("telegram_bot.bot.logger") as mock_logger:
+                    for _ in range(5):
+                        await on_response(100, "msg")
+
+        sm.end_session.assert_called_once_with(100)
+
+        # Check ERROR log message includes failure count and chat_id
+        error_calls = mock_logger.error.call_args_list
+        circuit_breaker_log = None
+        for call in error_calls:
+            msg = call[0][0] % tuple(call[0][1:])
+            if "consecutive" in msg.lower() and "100" in msg:
+                circuit_breaker_log = msg
+                break
+        assert circuit_breaker_log is not None, "No circuit breaker ERROR log found"
+        assert "5" in circuit_breaker_log
+
+    @pytest.mark.asyncio
+    async def test_does_not_trigger_at_4_failures(self):
+        """4 consecutive failures — session NOT ended."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False):
+            for _ in range(4):
+                await on_response(100, "msg")
+
+        sm.end_session.assert_not_called()
+
+
+class TestCircuitBreakerFinalNotification:
+    """QA step 3: circuit breaker sends final notification."""
+
+    @pytest.mark.asyncio
+    async def test_sends_final_notification(self):
+        """5 failures — one attempt to send user notification."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False):
+            with patch("telegram_bot.bot.retry_send_message", new_callable=AsyncMock, return_value=True) as mock_retry:
+                for _ in range(5):
+                    await on_response(100, "msg")
+
+        # Should have called retry_send_message with the notification text
+        mock_retry.assert_called_once_with(
+            bot,
+            100,
+            "Session ended due to repeated message delivery failures. "
+            "Please start a new session.",
+        )
+
+
+class TestCircuitBreakerFinalNotificationFailure:
+    """QA step 4: final notification failure is non-blocking."""
+
+    @pytest.mark.asyncio
+    async def test_final_notification_failure_non_blocking(self):
+        """Final notification fails — no exception, failure is logged."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False):
+            with patch(
+                "telegram_bot.bot.retry_send_message",
+                new_callable=AsyncMock,
+                side_effect=Exception("send failed"),
+            ):
+                with patch("telegram_bot.bot.logger") as mock_logger:
+                    # Should NOT raise
+                    for _ in range(5):
+                        await on_response(100, "msg")
+
+        # Session should still be ended despite notification failure
+        sm.end_session.assert_called_once_with(100)
+
+        # Failure should be logged
+        mock_logger.exception.assert_called()
+
+
+class TestCircuitBreakerPostBreaker:
+    """QA step 5: post-circuit-breaker message routing."""
+
+    @pytest.mark.asyncio
+    async def test_post_breaker_no_active_session(self):
+        """After circuit breaker, new message enters no-active-session flow."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        # Trigger circuit breaker
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False):
+            with patch("telegram_bot.bot.retry_send_message", new_callable=AsyncMock, return_value=True):
+                for _ in range(5):
+                    await on_response(100, "msg")
+
+        # Now simulate that the session has been removed (end_session was called)
+        sm.has_session.return_value = False
+
+        # Send a new plain text message — should get "no active session"
+        new_update = _make_update(user_id=100, chat_id=100, text="hello again")
+        await plain_text_handler.__wrapped__(new_update, context)
+
+        sm.send_message.assert_not_called()
+        reply = new_update.message.reply_text.call_args[0][0]
+        assert "no active session" in reply.lower()
+
+
+class TestCircuitBreakerSessionScoping:
+    """QA step 6: failure counter is scoped per session."""
+
+    @pytest.mark.asyncio
+    async def test_separate_counters_per_session(self):
+        """Failures in one session don't affect another session's counter."""
+        # Session for chat 100
+        sm1 = _make_session_manager(has_session=False)
+        session1 = MagicMock()
+        session1.send = AsyncMock()
+        sm1.start_session.return_value = session1
+
+        bot1 = MagicMock()
+        bot1.send_message = AsyncMock()
+        update1 = _make_update(user_id=100, chat_id=100, text="/operator")
+        context1 = _make_context(session_manager=sm1, bot=bot1)
+
+        await agent_command_handler.__wrapped__(update1, context1)
+        on_response_1 = sm1.start_session.call_args.kwargs["on_response"]
+
+        # Session for chat 200
+        sm2 = _make_session_manager(has_session=False)
+        session2 = MagicMock()
+        session2.send = AsyncMock()
+        sm2.start_session.return_value = session2
+
+        bot2 = MagicMock()
+        bot2.send_message = AsyncMock()
+        update2 = _make_update(user_id=200, chat_id=200, text="/operator")
+        context2 = _make_context(session_manager=sm2, bot=bot2)
+
+        await agent_command_handler.__wrapped__(update2, context2)
+        on_response_2 = sm2.start_session.call_args.kwargs["on_response"]
+
+        # 4 failures on session 1
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False):
+            for _ in range(4):
+                await on_response_1(100, "msg")
+
+        # 4 failures on session 2
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False):
+            for _ in range(4):
+                await on_response_2(200, "msg")
+
+        # Neither session should be ended (both at 4, not 5)
+        sm1.end_session.assert_not_called()
+        sm2.end_session.assert_not_called()
+
+
+class TestCircuitBreakerEndToEnd:
+    """QA step 7: integration test — end-to-end circuit breaker flow."""
+
+    @pytest.mark.asyncio
+    async def test_end_to_end_circuit_breaker(self):
+        """Start session, fail 5 sends, verify session ended and logs."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        bot = MagicMock()
+        # All sends fail (including the notification attempt)
+        bot.send_message = AsyncMock(side_effect=NetworkError("network down"))
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        # Don't patch send_long_message — let it call the real retry_send_message
+        # which will call bot.send_message (which fails)
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock):
+            with patch("telegram_bot.bot.logger") as mock_logger:
+                for _ in range(5):
+                    await on_response(100, "msg")
+
+        # Session should be ended
+        sm.end_session.assert_called_once_with(100)
+
+        # Check circuit breaker log message
+        error_calls = mock_logger.error.call_args_list
+        circuit_msgs = [
+            call[0][0] % tuple(call[0][1:])
+            for call in error_calls
+            if "consecutive" in (call[0][0] % tuple(call[0][1:])).lower()
+        ]
+        assert len(circuit_msgs) >= 1
+        assert "100" in circuit_msgs[0]
+        assert "5" in circuit_msgs[0]
+
+        # After circuit breaker, new message gets no-session response
+        sm.has_session.return_value = False
+        new_update = _make_update(user_id=100, chat_id=100, text="hello")
+        await plain_text_handler.__wrapped__(new_update, context)
+        reply = new_update.message.reply_text.call_args[0][0]
+        assert "no active session" in reply.lower()
+
+    @pytest.mark.asyncio
+    async def test_subsequent_on_response_after_breaker_short_circuits(self):
+        """After circuit breaker trips, further on_response calls are no-ops."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        with patch("telegram_bot.bot.send_long_message", new_callable=AsyncMock, return_value=False) as mock_send:
+            with patch("telegram_bot.bot.retry_send_message", new_callable=AsyncMock, return_value=True):
+                for _ in range(5):
+                    await on_response(100, "msg")
+
+                # Reset mock to track calls after breaker
+                mock_send.reset_mock()
+
+                # Additional calls should be no-ops
+                await on_response(100, "more text")
+                await on_response(100, "even more text")
+
+        # send_long_message should NOT have been called after the breaker
+        mock_send.assert_not_called()
+
+        # end_session should only have been called once
+        assert sm.end_session.call_count == 1

@@ -6,6 +6,7 @@ a working Telegram bot that proxies user messages to Claude agent subprocesses.
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import logging
 import subprocess
@@ -13,6 +14,7 @@ import sys
 from typing import List, Optional
 
 from telegram import Update
+from telegram.error import BadRequest, Forbidden, NetworkError, RetryAfter, TimedOut
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -160,12 +162,90 @@ def split_message(text: str, max_length: int = _MAX_MESSAGE_LENGTH) -> List[str]
     return chunks
 
 
+async def retry_send_message(
+    bot,
+    chat_id: int,
+    text: str,
+    max_attempts: int = 3,
+) -> bool:
+    """Send a message via *bot* with retry logic for transient failures.
+
+    Parameters
+    ----------
+    bot:
+        The ``telegram.Bot`` instance.
+    chat_id:
+        Target chat ID.
+    text:
+        Message text to send (must fit within Telegram limits).
+    max_attempts:
+        Maximum number of send attempts (1 initial + retries).
+
+    Returns
+    -------
+    bool
+        ``True`` if the message was sent successfully, ``False`` if all
+        attempts failed or a non-retryable error occurred.
+    """
+    _NON_RETRYABLE = (BadRequest, Forbidden)
+    _RETRYABLE = (TimedOut, NetworkError, RetryAfter)
+
+    for attempt in range(max_attempts):
+        try:
+            await bot.send_message(chat_id=chat_id, text=text)
+            return True
+        except _NON_RETRYABLE as exc:
+            logger.error(
+                "Non-retryable send failure (attempt %d/%d) "
+                "chat_id=%d msg_len=%d: %s: %s",
+                attempt + 1,
+                max_attempts,
+                chat_id,
+                len(text),
+                type(exc).__name__,
+                exc,
+            )
+            return False
+        except _RETRYABLE as exc:
+            logger.error(
+                "Retryable send failure (attempt %d/%d) "
+                "chat_id=%d msg_len=%d: %s: %s",
+                attempt + 1,
+                max_attempts,
+                chat_id,
+                len(text),
+                type(exc).__name__,
+                exc,
+            )
+            # Last attempt — no more retries.
+            if attempt + 1 >= max_attempts:
+                break
+            # Determine backoff delay.
+            if isinstance(exc, RetryAfter):
+                delay = exc.retry_after
+            else:
+                delay = 2 ** attempt  # 1, 2, 4, …
+            await asyncio.sleep(delay)
+
+    # All retries exhausted — log truncated message content.
+    truncated = text[:200]
+    logger.error(
+        "All %d send attempts exhausted for chat_id=%d msg_len=%d. "
+        "Message dropped. Content (first 200 chars): %s",
+        max_attempts,
+        chat_id,
+        len(text),
+        truncated,
+    )
+    return False
+
+
 async def send_long_message(
     bot,
     chat_id: int,
     text: str,
-) -> None:
-    """Split *text* if necessary and send each chunk as plain text.
+) -> bool:
+    """Split *text* if necessary and send each chunk with retry logic.
 
     Parameters
     ----------
@@ -175,9 +255,18 @@ async def send_long_message(
         Target chat ID.
     text:
         Message text (may exceed 4096 characters).
+
+    Returns
+    -------
+    bool
+        ``True`` if all chunks were sent successfully, ``False`` if any
+        chunk failed.
     """
+    all_ok = True
     for chunk in split_message(text):
-        await bot.send_message(chat_id=chat_id, text=chunk)
+        if not await retry_send_message(bot, chat_id, chunk):
+            all_ok = False
+    return all_ok
 
 
 # ------------------------------------------------------------------
@@ -249,8 +338,45 @@ async def agent_command_handler(
     # Build the response callback for this chat.
     bot = context.bot
 
+    # Circuit breaker state — shared by the on_response closure.
+    _CIRCUIT_BREAKER_THRESHOLD = 5
+    failure_state = {"consecutive_failures": 0, "circuit_broken": False}
+
     async def on_response(cid: int, text: str) -> None:
-        await send_long_message(bot, cid, text)
+        # If the circuit breaker already tripped, don't attempt further sends.
+        if failure_state["circuit_broken"]:
+            return
+
+        success = await send_long_message(bot, cid, text)
+        if success:
+            failure_state["consecutive_failures"] = 0
+        else:
+            failure_state["consecutive_failures"] += 1
+            if failure_state["consecutive_failures"] >= _CIRCUIT_BREAKER_THRESHOLD:
+                failure_state["circuit_broken"] = True
+                count = failure_state["consecutive_failures"]
+                logger.error(
+                    "Session ended: %d consecutive Telegram send failures "
+                    "for chat %d",
+                    count,
+                    cid,
+                )
+                # Attempt a final notification to the user.
+                try:
+                    await retry_send_message(
+                        bot,
+                        cid,
+                        "Session ended due to repeated message delivery "
+                        "failures. Please start a new session.",
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to send circuit breaker notification "
+                        "to chat %d.",
+                        cid,
+                    )
+                # End the session via the session manager.
+                await session_manager.end_session(cid)
 
     async def on_end(
         cid: int, aname: str, reason: str, *, stderr_tail: str = ""

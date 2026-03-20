@@ -247,6 +247,56 @@ Requirements:
 - Should refuse to start if the `PIPELINE_YAML` file does not exist
 - Should be executable (`chmod +x`)
 
+## Telegram Send Error Handling
+
+### Problem
+
+When `send_long_message` or the `on_response` callback fails to deliver a message via the Telegram API, the error propagates silently. The response text is dropped with no retry, no user notification, and no recovery. If the underlying issue persists (network outage, rate limiting), every subsequent Claude response also fails silently, making the bot appear to ignore the user entirely.
+
+### Retry Strategy
+
+All Telegram `bot.send_message()` calls in the response delivery path must be wrapped with retry logic:
+
+- **Max retries**: 3 attempts (initial + 2 retries)
+- **Backoff**: Exponential — 1s, 2s, 4s between retries
+- **RetryAfter exception**: Use the server-provided `retry_after` value instead of the standard backoff timing
+- **Retryable errors**: `TimedOut`, `NetworkError`, `RetryAfter`
+- **Non-retryable errors**: `BadRequest`, `Forbidden` — fail immediately, no retry
+
+### Behavior When Retries Are Exhausted
+
+When a message cannot be delivered after all retry attempts:
+
+1. **Log the failure** at ERROR level, including: exception type, chat_id, message length, retry attempt count, and truncated message content (first 200 characters)
+2. **Do not attempt** to send a "delivery failed" notification to the user (the Telegram API is likely still broken)
+3. **Do not crash** the session on a single failure — allow the session to continue so transient issues can self-resolve
+
+### Consecutive Failure Circuit Breaker
+
+To prevent sessions from running indefinitely while silently dropping all output:
+
+- Track consecutive send failures per session
+- After **5 consecutive send failures**, end the session automatically
+- Log at ERROR level: "Session ended: {N} consecutive Telegram send failures for chat {chat_id}"
+- Attempt one final notification to the user: "Session ended due to repeated message delivery failures. Please start a new session." — but do not retry or block if this also fails
+- A successful send resets the consecutive failure counter to 0
+
+### Post-Failure Message Routing
+
+After a session ends due to send failures:
+
+- New messages from the user follow the normal "no active session" flow (prompting them to start a new session)
+- If that notification also fails to send, log it and move on — do not enter any retry loop for non-session messages
+
+### Logging Requirements
+
+All send failures must log:
+- Exception type and message
+- Chat ID
+- Message length (characters)
+- Retry attempt number (e.g., "attempt 2/3")
+- Truncated message content (first 200 chars) when a message is permanently dropped (all retries exhausted)
+
 ## Constraints & Assumptions
 
 - The bot runs on the **same machine** as the agent pipeline (needs filesystem access to the project)

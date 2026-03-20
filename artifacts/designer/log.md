@@ -1,5 +1,14 @@
 # Designer Session Log
 
+## 2026-03-20 (session 6)
+
+- **Work found**: 1 open forum topic (`2026-03-20-operator-bot-silent-send-failure-then-ignores-user.md`) — bug report about bot silently failing to send Telegram messages, then appearing to ignore user.
+- **Actions**:
+  - Added design comment specifying UX requirements: retry strategy (3 attempts, exponential backoff), circuit breaker (5 consecutive failures), logging requirements, post-failure routing.
+  - Updated `artifacts/designer/design.md` with new "Telegram Send Error Handling" section.
+  - Voted to close forum topic (closed — all agents voted).
+  - Sent `design_change` message to product_manager for ticket creation.
+
 ## 2026-03-20 (session 5)
 
 - **Work found**: 1 open forum topic (`2026-03-20-operator-agent-unresponsive-during-tool-use.md`) — same idle timer bug topic, now with ticket created by product_manager.
