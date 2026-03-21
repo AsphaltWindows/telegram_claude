@@ -983,6 +983,158 @@ class TestRetrySendMessage:
 
         assert result is False
 
+
+# ---------------------------------------------------------------------------
+# Session death notification tests
+# ---------------------------------------------------------------------------
+
+
+class TestSessionDeathNotifications:
+    """Tests for session death notification messages."""
+
+    async def _get_on_end(self, bot=None):
+        """Start a session and return the on_end callback."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        if bot is None:
+            bot = MagicMock()
+            bot.send_message = AsyncMock()
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_end = sm.start_session.call_args.kwargs["on_end"]
+        return on_end, bot, sm
+
+    @pytest.mark.asyncio
+    async def test_timeout_message_format(self):
+        """Timeout notification matches the spec exactly."""
+        on_end, bot, _ = await self._get_on_end()
+
+        await on_end(100, "operator", "timeout")
+
+        bot.send_message.assert_called()
+        sent_text = bot.send_message.call_args.kwargs["text"]
+        assert sent_text == (
+            "Session with `operator` timed out after 10 minutes "
+            "of inactivity. Work has been saved."
+        )
+
+    @pytest.mark.asyncio
+    async def test_crash_message_with_stderr(self):
+        """Crash notification includes stderr inline."""
+        on_end, bot, _ = await self._get_on_end()
+
+        await on_end(
+            100, "operator", "crash",
+            stderr_tail="Error: ENOMEM out of memory",
+        )
+
+        bot.send_message.assert_called()
+        sent_text = bot.send_message.call_args.kwargs["text"]
+        assert "ended unexpectedly" in sent_text
+        assert "`operator`" in sent_text
+        assert "Error: ENOMEM out of memory" in sent_text
+
+    @pytest.mark.asyncio
+    async def test_crash_message_without_stderr(self):
+        """Crash notification without stderr has no trailing content."""
+        on_end, bot, _ = await self._get_on_end()
+
+        await on_end(100, "operator", "crash", stderr_tail="")
+
+        bot.send_message.assert_called()
+        sent_text = bot.send_message.call_args.kwargs["text"]
+        assert sent_text == "Session with `operator` ended unexpectedly."
+
+    @pytest.mark.asyncio
+    async def test_shutdown_message_format(self):
+        """Normal shutdown message."""
+        on_end, bot, _ = await self._get_on_end()
+
+        await on_end(100, "operator", "shutdown")
+
+        bot.send_message.assert_called()
+        sent_text = bot.send_message.call_args.kwargs["text"]
+        assert sent_text == "Session with operator ended."
+
+    @pytest.mark.asyncio
+    async def test_unknown_reason_message(self):
+        """Unknown reason falls back to a generic message."""
+        on_end, bot, _ = await self._get_on_end()
+
+        await on_end(100, "operator", "unknown_reason")
+
+        bot.send_message.assert_called()
+        sent_text = bot.send_message.call_args.kwargs["text"]
+        assert "operator" in sent_text
+        assert "unknown_reason" in sent_text
+
+    @pytest.mark.asyncio
+    async def test_on_end_send_failure_logged(self):
+        """When send_long_message returns False, a warning is logged."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(side_effect=NetworkError("fail"))
+        on_end, _, _ = await self._get_on_end(bot=bot)
+
+        with patch("telegram_bot.bot.logger") as mock_logger:
+            await on_end(100, "operator", "timeout")
+
+        mock_logger.warning.assert_called()
+        warning_msg = str(mock_logger.warning.call_args)
+        assert "100" in warning_msg
+
+    @pytest.mark.asyncio
+    async def test_on_end_exception_does_not_propagate(self):
+        """If send_long_message raises, on_end catches and logs."""
+        bot = MagicMock()
+        bot.send_message = AsyncMock(side_effect=Exception("unexpected"))
+        on_end, _, _ = await self._get_on_end(bot=bot)
+
+        with patch("telegram_bot.bot.logger") as mock_logger:
+            # Should not raise
+            await on_end(100, "operator", "crash", stderr_tail="err")
+
+        mock_logger.exception.assert_called()
+
+
+class TestCircuitBreakerNotification:
+    """Tests for the circuit breaker notification."""
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_uses_single_attempt(self):
+        """Circuit breaker notification uses max_attempts=1."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        bot = MagicMock()
+        # Fail all sends to trigger circuit breaker
+        bot.send_message = AsyncMock(side_effect=NetworkError("fail"))
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_response = sm.start_session.call_args.kwargs["on_response"]
+
+        # Trigger circuit breaker with 5 consecutive failures
+        with patch("telegram_bot.bot.asyncio.sleep", new_callable=AsyncMock):
+            for _ in range(5):
+                await on_response(100, "hello")
+
+        # After circuit breaker trips, the notification send_message call
+        # should have been attempted. Count total calls:
+        # Each send_long_message calls retry_send_message which tries 3 times,
+        # so 5 responses * 3 attempts = 15 calls + 1 notification call = 16
+        assert bot.send_message.call_count >= 16
+
+        # Verify session was ended
+        sm.end_session.assert_called_once_with(100)
+
     @pytest.mark.asyncio
     async def test_no_exception_propagates(self):
         """Errors are caught — no exception propagates to caller."""
@@ -1170,12 +1322,13 @@ class TestCircuitBreakerFinalNotification:
                 for _ in range(5):
                     await on_response(100, "msg")
 
-        # Should have called retry_send_message with the notification text
+        # Should have called retry_send_message with the notification text and max_attempts=1
         mock_retry.assert_called_once_with(
             bot,
             100,
             "Session ended due to repeated message delivery failures. "
             "Please start a new session.",
+            max_attempts=1,
         )
 
 
@@ -1383,3 +1536,218 @@ class TestCircuitBreakerEndToEnd:
 
         # end_session should only have been called once
         assert sm.end_session.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Session timeout notification tests
+# ---------------------------------------------------------------------------
+
+
+class TestSessionTimeoutNotification:
+    """Tests for timeout notification, logging, and race condition handling."""
+
+    @pytest.mark.asyncio
+    async def test_timeout_message_includes_recovery_instruction(self):
+        """Timeout message should mention inactivity and work saved."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_end = sm.start_session.call_args.kwargs["on_end"]
+
+        await on_end(100, "operator", "timeout")
+
+        bot.send_message.assert_called()
+        sent_text = bot.send_message.call_args.kwargs["text"]
+        assert "inactivity" in sent_text.lower()
+        assert "`operator`" in sent_text
+        assert "10 minutes" in sent_text
+        assert "work has been saved" in sent_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_timeout_logs_warning_on_send_failure(self):
+        """When the timeout notification fails to send, a warning is logged."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_end = sm.start_session.call_args.kwargs["on_end"]
+
+        with patch(
+            "telegram_bot.bot.send_long_message",
+            new_callable=AsyncMock,
+            return_value=False,
+        ):
+            with patch("telegram_bot.bot.logger") as mock_logger:
+                await on_end(100, "operator", "timeout")
+
+                mock_logger.warning.assert_called()
+                warning_args = mock_logger.warning.call_args[0]
+                warning_msg = warning_args[0] % tuple(warning_args[1:])
+                assert "100" in warning_msg
+                assert "timeout" in warning_msg
+
+    @pytest.mark.asyncio
+    async def test_timeout_no_warning_on_successful_send(self):
+        """When the timeout notification sends successfully, no warning is logged."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_end = sm.start_session.call_args.kwargs["on_end"]
+
+        with patch(
+            "telegram_bot.bot.send_long_message",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            with patch("telegram_bot.bot.logger") as mock_logger:
+                await on_end(100, "operator", "timeout")
+
+                mock_logger.warning.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_timeout_exception_caught_and_logged(self):
+        """If send_long_message raises, exception is caught and logged."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_end = sm.start_session.call_args.kwargs["on_end"]
+
+        with patch(
+            "telegram_bot.bot.send_long_message",
+            new_callable=AsyncMock,
+            side_effect=Exception("network down"),
+        ):
+            with patch("telegram_bot.bot.logger") as mock_logger:
+                # Should not raise
+                await on_end(100, "operator", "timeout")
+
+                mock_logger.exception.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_shutdown_message_no_recovery_instruction(self):
+        """Normal shutdown message should not include agent command hint."""
+        sm = _make_session_manager(has_session=False)
+        session = MagicMock()
+        session.send = AsyncMock()
+        sm.start_session.return_value = session
+
+        update = _make_update(user_id=100, chat_id=100, text="/operator")
+        bot = MagicMock()
+        bot.send_message = AsyncMock()
+        context = _make_context(session_manager=sm, bot=bot)
+
+        await agent_command_handler.__wrapped__(update, context)
+        on_end = sm.start_session.call_args.kwargs["on_end"]
+
+        await on_end(100, "operator", "shutdown")
+
+        sent_text = bot.send_message.call_args.kwargs["text"]
+        assert "ended" in sent_text.lower()
+        # Shutdown message should NOT include "/operator" recovery hint
+        assert "/operator" not in sent_text
+
+
+# ---------------------------------------------------------------------------
+# plain_text_handler race condition tests
+# ---------------------------------------------------------------------------
+
+
+class TestPlainTextRaceCondition:
+    """Tests for race condition handling when session ends during message delivery."""
+
+    @pytest.mark.asyncio
+    async def test_runtime_error_handled_gracefully(self):
+        """RuntimeError from send_message should produce a helpful reply, not crash."""
+        sm = _make_session_manager(has_session=True)
+        sm.send_message = AsyncMock(
+            side_effect=RuntimeError("Session is no longer active.")
+        )
+
+        update = _make_update(user_id=100, chat_id=100, text="hello agent")
+        context = _make_context(session_manager=sm)
+
+        await plain_text_handler.__wrapped__(update, context)
+
+        reply = update.message.reply_text.call_args[0][0]
+        assert "ended" in reply.lower()
+        assert "new" in reply.lower() or "start" in reply.lower()
+
+    @pytest.mark.asyncio
+    async def test_value_error_handled_gracefully(self):
+        """ValueError from send_message should produce a helpful reply, not crash."""
+        sm = _make_session_manager(has_session=True)
+        sm.send_message = AsyncMock(
+            side_effect=ValueError("No active session for user 100.")
+        )
+
+        update = _make_update(user_id=100, chat_id=100, text="hello agent")
+        context = _make_context(session_manager=sm)
+
+        await plain_text_handler.__wrapped__(update, context)
+
+        reply = update.message.reply_text.call_args[0][0]
+        assert "ended" in reply.lower()
+
+    @pytest.mark.asyncio
+    async def test_race_condition_logs_info(self):
+        """Race condition should be logged at INFO level."""
+        sm = _make_session_manager(has_session=True)
+        sm.send_message = AsyncMock(
+            side_effect=RuntimeError("Session is no longer active.")
+        )
+
+        update = _make_update(user_id=100, chat_id=100, text="hello agent")
+        context = _make_context(session_manager=sm)
+
+        with patch("telegram_bot.bot.logger") as mock_logger:
+            await plain_text_handler.__wrapped__(update, context)
+
+            mock_logger.info.assert_called()
+            info_args = mock_logger.info.call_args[0]
+            info_msg = info_args[0] % tuple(info_args[1:])
+            assert "100" in info_msg
+
+    @pytest.mark.asyncio
+    async def test_normal_send_unaffected(self):
+        """Normal send_message (no error) should still work as before."""
+        sm = _make_session_manager(has_session=True)
+
+        update = _make_update(user_id=100, chat_id=100, text="hello agent")
+        context = _make_context(session_manager=sm)
+
+        await plain_text_handler.__wrapped__(update, context)
+
+        sm.send_message.assert_called_once_with(100, "hello agent")
+        # No error reply should be sent
+        update.message.reply_text.assert_not_called()

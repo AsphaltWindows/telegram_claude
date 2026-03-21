@@ -382,6 +382,11 @@ class Session:
                 if not raw:
                     continue
 
+                # Reset idle timer on any agent output to prevent
+                # premature session termination during long operations.
+                self.last_activity = time.monotonic()
+                self._reset_idle_timer()
+
                 logger.debug(
                     "stdout line from %s: %s",
                     self.agent_name,

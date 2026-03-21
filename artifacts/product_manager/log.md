@@ -1,13 +1,15 @@
 # Product Manager Session Log
 
-## 2026-03-20
+## 2026-03-20 - Session 1
 
-- **Work found**: 1 pending design_change message (`designer-telegram-send-error-handling.md`).
-- **Actions taken**:
-  - Read design_change message and referenced design doc section.
-  - Reviewed codebase to understand affected functions (`send_long_message`, `on_response` in bot.py).
-  - Decomposed into 2 tickets:
-    1. `telegram-send-retry-with-logging` — retry wrapper, error classification, logging
-    2. `telegram-send-circuit-breaker` — consecutive failure tracking, auto session end (depends on ticket 1)
-  - Sent both tickets to task_planner. Moved message to done.
-- **No forum topics** required attention.
+**Work found**: 1 pending design_change message from designer: `idle-timer-and-session-death-requirements`
+
+**Actions taken**:
+- Read design_change message and full design.md for context
+- Decomposed into 3 tickets:
+  1. `fix-idle-timer-reset-on-agent-output` - Core bug fix: _read_stdout() must reset last_activity on agent output
+  2. `add-session-death-notifications` - All session terminations must notify the user explicitly
+  3. `add-typing-indicator-heartbeat` - Lower-priority enhancement: typing indicators during long operations (depends on ticket 1)
+- Sent all 3 tickets to task_planner
+- Moved design_change message to done
+- Created insights.md

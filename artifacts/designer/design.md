@@ -195,9 +195,24 @@ The stdout reader (`_read_stdout`) must include diagnostic logging to aid debugg
 
 ### Idle Timeout Implementation
 
-- Each user message resets a per-session timer
-- An asyncio task checks the timer; if 10 minutes elapse with no user message, it triggers graceful shutdown
+- Each user message resets a per-session timer (`last_activity` timestamp)
+- **Agent output must also reset the timer**: When `_read_stdout()` receives output from the agent process, it must update `last_activity`. This ensures that long-running agent operations (file reads, multi-step tool use) keep the session alive even if the user hasn't sent a message recently.
+- An asyncio task checks the timer; if 10 minutes elapse with no activity (user input OR agent output), it triggers graceful shutdown
 - Uses the same shutdown path as `/end`
+
+### Session Death Notifications
+
+If a session is terminated for any reason (idle timeout, crash, error, circuit breaker), the user **must** receive an explicit Telegram message explaining what happened. Silent session death — where the bot simply stops responding — is not acceptable.
+
+- **Idle timeout**: "Session with `<agent_name>` timed out after 10 minutes of inactivity. Work has been saved."
+- **Unexpected crash**: "Session with `<agent_name>` ended unexpectedly: {last stderr lines}"
+- **Send failure circuit breaker**: "Session ended due to repeated message delivery failures. Please start a new session."
+
+After any session termination, the bot must clean up session state so that new messages from the user follow the normal "no active session" flow and the bot remains responsive.
+
+### Heartbeat / Typing Indicator (Enhancement)
+
+For long-running agent operations where no output has been received for an extended period, the bot should send a Telegram typing indicator (`chat_action: typing`) or a periodic "Still working..." message to prevent user confusion. This is a lower-priority enhancement — the idle timer fix and session death notifications are the critical requirements.
 
 ### Agent Discovery
 

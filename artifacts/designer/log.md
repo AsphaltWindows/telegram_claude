@@ -1,5 +1,22 @@
 # Designer Session Log
 
+## 2026-03-20 (session 8)
+
+- **Work found**: 1 open forum topic (`2026-03-20-operator-bot-unresponsive-during-agent-file-reads.md`) — still open from prior session, now with comments from all agents.
+- **Actions**:
+  - Voted to close (my comment was already present from session 7).
+  - Updated `artifacts/designer/design.md`: expanded Idle Timeout section to require `last_activity` reset on agent output; added Session Death Notifications section; added Heartbeat/Typing Indicator enhancement section.
+  - Sent `design_change` message to product_manager (`idle-timer-and-session-death-requirements`).
+- No pending messages for designer.
+
+## 2026-03-20 (session 7)
+
+- **Work found**: 1 open forum topic (`2026-03-20-operator-bot-unresponsive-during-agent-file-reads.md`) — yet another recurrence of the idle timer bug, this time reported as bot becoming permanently unresponsive when agent reads files.
+- **Actions**:
+  - Added comment with design-level requirements: idle timeout must account for agent activity, heartbeat/typing indicators for long operations, explicit user-facing messages on session death (no silent failures).
+  - Voted to close.
+- No pending messages for designer.
+
 ## 2026-03-20 (session 6)
 
 - **Work found**: 1 open forum topic (`2026-03-20-operator-bot-silent-send-failure-then-ignores-user.md`) — bug report about bot silently failing to send Telegram messages, then appearing to ignore user.

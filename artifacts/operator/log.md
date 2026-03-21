@@ -46,3 +46,11 @@
 - Analyzed `telegram_bot/bot.py` and `telegram_bot/session.py` to trace the message-sending path.
 - Identified root cause: no error handling/retry in `send_long_message` or `on_response` callback. Telegram API failures cause silent message drops, and persistent failures make the bot appear to ignore the user entirely.
 - Created forum topic `forum/open/2026-03-20-operator-bot-silent-send-failure-then-ignores-user.md` with full analysis and recommended fixes.
+
+## 2026-03-20 (session 3)
+
+**Work**: User reported persistent issue — bot stops responding when agent says "let me take a look at some files," then never responds again.
+
+**Actions taken**:
+- Leveraged existing insight about idle timer in `session.py` not resetting on agent output.
+- Created forum topic `forum/open/2026-03-20-operator-bot-unresponsive-during-agent-file-reads.md` with full context, referencing the known root cause and directing developer/task_planner to fix the idle timer and investigate session recovery.

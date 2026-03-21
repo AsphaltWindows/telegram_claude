@@ -1,35 +1,26 @@
 # Developer Session Log
 
-## 2026-03-20T00:53:00Z
+## 2026-03-20 — fix-idle-timer-agent-output
 
-- **Work found**: Forum topic `2026-03-20-operator-bot-silent-send-failure-then-ignores-user.md` — bug report about silent Telegram send failures causing bot to appear to ignore users.
-- **Actions**: Read relevant source code (`bot.py` lines 155-270, `session.py` lines 385-415). Confirmed operator's analysis. Added detailed comment with proposed implementation approach (retry with backoff, consecutive failure tracking, improved logging). Did not vote to close — topic needs design input before implementation.
-- **Pending messages**: None found in `messages/developer/enriched_ticket/pending/`.
+- **Work found**: Enriched ticket `task_planner-fix-idle-timer-agent-output` in pending.
+- **Action**: Added 2 lines to `_read_stdout()` in `telegram_bot/session.py` (and artifacts copy) to reset `last_activity` and call `_reset_idle_timer()` on every non-empty stdout line from the agent. This prevents premature session termination during long agent operations.
+- **Tests**: Created `artifacts/developer/telegram_bot/tests/test_session_idle_timer.py` with 6 test cases covering the fix.
+- **Output**: Sent `task_complete` message to QA. Moved ticket to done.
 
-## 2026-03-20T13:20:00Z
+## 2026-03-20 — session-timeout-user-notification
 
-- **Work found**: Forum topic `2026-03-20-operator-bot-silent-send-failure-then-ignores-user.md` still open, needing my close vote.
-- **Actions**: Voted to close the forum topic. All agents have weighed in; discussion is complete. Awaiting designer input and formal tickets from product_manager.
-- **Pending messages**: None found in `messages/developer/enriched_ticket/pending/`.
-
-## 2026-03-20 — Session: telegram-send-retry-with-logging
-
-- **Work found**: Enriched ticket `task_planner-telegram-send-retry-with-logging` in pending.
+- **Work found**: Enriched ticket `task_planner-session-timeout-user-notification` in pending.
 - **Actions**:
-  - Implemented `retry_send_message()` in `telegram_bot/bot.py` with exponential backoff, error classification (retryable vs non-retryable), RetryAfter handling, and structured logging.
-  - Updated `send_long_message()` to use `retry_send_message()` for each chunk and return bool.
-  - Added 14 new tests (11 unit + 3 integration) covering all QA steps.
-  - Synced `artifacts/developer/telegram_bot/bot.py` with project source.
-  - All 63 tests pass.
-- **Output**: Sent `task_complete` message to QA agent. Moved ticket to done.
+  1. Improved timeout message in `on_end` callback (bot.py) to include recovery instructions (`Send /{agent} to start a new session`).
+  2. Added warning-level logging when `send_long_message` returns False in on_end.
+  3. Added try/except for RuntimeError/ValueError in `plain_text_handler` to handle race condition when session ends between has_session() and send_message().
+- **Tests**: Added 8 new tests in test_bot.py: TestSessionTimeoutNotification (5) and TestPlainTextRaceCondition (4). All 81 tests pass.
+- **Output**: Sent `task_complete` message to QA. Moved ticket to done.
 
-## 2026-03-20 — Circuit Breaker Implementation
+## 2026-03-20 — batch: idle-timer-verify + death-notifications + typing-heartbeat
 
-- **Work found**: Pending enriched ticket `task_planner-telegram-send-circuit-breaker.md`
-- **Actions taken**:
-  - Implemented circuit breaker in `on_response` closure within `agent_command_handler()` in both `telegram_bot/bot.py` and `artifacts/developer/telegram_bot/bot.py`
-  - Added `failure_state` dict tracking consecutive failures and circuit-broken flag
-  - Added 9 new tests across 7 test classes covering all 7 QA steps
-  - All 72 tests pass
-- **Issue encountered**: Initially only modified `telegram_bot/bot.py` (project root) but tests import from `artifacts/developer/telegram_bot/bot.py`. Debugged failing tests until discovering the dual-copy issue. Applied same changes to artifacts copy — all tests green.
-- **Produced**: `task_complete` message sent to QA agent
+- **Work found**: 3 enriched tickets in pending.
+- **Ticket 1: fix-idle-timer-reset-on-agent-output** — Already implemented. Ran 6 existing tests, all passed. Sent task_complete to QA.
+- **Ticket 2: add-session-death-notifications** — Updated on_end messages in bot.py: timeout now says "timed out after 10 minutes of inactivity. Work has been saved.", crash includes stderr inline. Circuit breaker notification changed to max_attempts=1. Added 8 new tests (TestSessionDeathNotifications: 7, TestCircuitBreakerNotification: 1). Updated 2 existing tests for new message formats. All 89 bot tests pass.
+- **Ticket 3: add-typing-indicator-heartbeat** — Added _typing_heartbeat() method to Session, on_typing callback parameter, wired through SessionManager and bot.py. Created test_typing_heartbeat.py with 8 tests. Full suite: 205 passed, 1 skipped.
+- **Output**: 3 task_complete messages sent to QA. All tickets moved to done.

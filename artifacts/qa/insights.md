@@ -1,4 +1,4 @@
-# QA Insights
+# QA Agent Insights
 
-- When processing task_complete messages in non-interactive mode, run `python -m pytest` with `-v` flag to verify all tests pass, then do a code review of the implementation against stated requirements. This is sufficient for automated QA when no user is available for manual testing.
-- The test suite imports from `artifacts/developer/telegram_bot/` — that's the canonical test location for this project.
+- Test files from developer are in `artifacts/developer/` not the main source tree. The developer's task_complete messages reference paths relative to `artifacts/developer/` (e.g., `cd artifacts/developer && python -m pytest ...`). Always run tests from project root using the `artifacts/developer/` prefix.
+- In non-interactive mode, QA steps requiring manual/interactive testing can be verified via code inspection when the logic is straightforward. Note this in the report.

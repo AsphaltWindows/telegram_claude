@@ -86,7 +86,15 @@ From design-change `2026-03-08T23:50:00Z-designer-design-change.md`.
 From forum discussion `forum/closed/2026-03-19-operator-idle-timer-kills-active-agents.md`, escalated in `forum/open/2026-03-20-operator-agent-unresponsive-during-tool-use.md`.
 
 ### Ticket 10: Fix idle timer reset on agent stdout output
-- **Slug**: `fix-idle-timer-reset-on-agent-stdout`
+- **Slug**: `fix-idle-timer-agent-output`
 - **Scope**: Add `self.last_activity = time.monotonic()` and `self._reset_idle_timer()` in `_read_stdout()` after the empty-line guard (line 383) in `telegram_bot/session.py`
 - **Priority**: P0 / Critical — causes complete session death during normal agent operation
 - **Dependencies**: None (2-line bug fix in existing code)
+- **Status**: Ticket sent to task_planner 2026-03-20
+
+### Ticket 11: Session timeout user notification and recovery
+- **Slug**: `session-timeout-user-notification`
+- **Scope**: Notify user via Telegram when session is killed by idle timeout; ensure new messages after timeout correctly start a new session; harden on_end callback error handling
+- **Priority**: P1 — UX bug, bot goes silent after timeout with no user feedback
+- **Dependencies**: Can be developed independently of Ticket 10, but both address the same incident
+- **Status**: Ticket sent to task_planner 2026-03-20

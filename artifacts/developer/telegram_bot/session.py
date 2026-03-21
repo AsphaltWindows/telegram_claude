@@ -27,6 +27,10 @@ _PROJECT_ROOT = Path.cwd()
 # Timeout in seconds before force-killing the process during graceful shutdown.
 _SHUTDOWN_TIMEOUT = 60
 
+# Interval in seconds for the typing indicator heartbeat.
+# Telegram typing indicators expire after ~5 seconds, so we re-send at this rate.
+_TYPING_HEARTBEAT_INTERVAL = 5
+
 # Maximum number of stderr lines to buffer for crash diagnostics.
 _STDERR_BUFFER_LINES = 10
 
@@ -159,6 +163,10 @@ class Session:
         Callable invoked with ``(chat_id,)`` to remove the session from
         the ``SessionManager``'s internal map.  May be ``None`` for
         standalone usage.
+    on_typing:
+        Optional async callback invoked with ``(chat_id,)`` to send a
+        typing indicator to the user.  If ``None``, no typing indicator
+        is sent.
     """
 
     def __init__(
@@ -171,6 +179,7 @@ class Session:
         idle_timeout: int,
         shutdown_message: str,
         cleanup: Optional[Callable] = None,
+        on_typing: Optional[Callable] = None,
     ) -> None:
         self.chat_id = chat_id
         self.agent_name = agent_name
@@ -179,6 +188,7 @@ class Session:
 
         self._on_response = on_response
         self._on_end = on_end
+        self._on_typing = on_typing
         self._idle_timeout = idle_timeout
         self._shutdown_message = shutdown_message
         self._cleanup = cleanup
@@ -195,6 +205,7 @@ class Session:
         self._stdout_task: Optional[asyncio.Task] = None
         self._stderr_task: Optional[asyncio.Task] = None
         self._idle_task: Optional[asyncio.Task] = None
+        self._typing_task: Optional[asyncio.Task] = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -223,6 +234,8 @@ class Session:
         self._stdout_task = asyncio.create_task(self._read_stdout())
         self._stderr_task = asyncio.create_task(self._read_stderr())
         self._idle_task = asyncio.create_task(self._idle_timer())
+        if self._on_typing is not None:
+            self._typing_task = asyncio.create_task(self._typing_heartbeat())
 
     async def send(self, text: str) -> None:
         """Write a user message to the agent's stdin.
@@ -341,7 +354,7 @@ class Session:
         # Cancel remaining background tasks — but not the currently executing
         # task, to avoid a spurious CancelledError during the on_end callback.
         current = asyncio.current_task() if hasattr(asyncio, 'current_task') else asyncio.Task.current_task()
-        for task in (self._stdout_task, self._stderr_task, self._idle_task):
+        for task in (self._stdout_task, self._stderr_task, self._idle_task, self._typing_task):
             if task and not task.done() and task is not current:
                 task.cancel()
 
@@ -381,6 +394,11 @@ class Session:
                 raw = line.decode(errors="replace").rstrip("\n")
                 if not raw:
                     continue
+
+                # Reset idle timer on any agent output to prevent
+                # premature session termination during long operations.
+                self.last_activity = time.monotonic()
+                self._reset_idle_timer()
 
                 logger.debug(
                     "stdout line from %s: %s",
@@ -459,6 +477,34 @@ class Session:
         except asyncio.CancelledError:
             return
 
+    async def _typing_heartbeat(self) -> None:
+        """Periodically send a typing indicator when the agent is silent.
+
+        If no agent output has been received for ``_TYPING_HEARTBEAT_INTERVAL``
+        seconds, sends a typing indicator via the ``on_typing`` callback.
+        The indicator is re-sent every ``_TYPING_HEARTBEAT_INTERVAL`` seconds
+        until new output arrives or the session ends.
+
+        Errors from the callback are logged and swallowed — a failed typing
+        indicator must never crash the session.
+        """
+        try:
+            while not self._ended:
+                await asyncio.sleep(_TYPING_HEARTBEAT_INTERVAL)
+                if self._ended:
+                    return
+                elapsed = time.monotonic() - self.last_activity
+                if elapsed >= _TYPING_HEARTBEAT_INTERVAL:
+                    try:
+                        await self._on_typing(self.chat_id)
+                    except Exception:
+                        logger.exception(
+                            "Typing indicator callback failed for chat %d.",
+                            self.chat_id,
+                        )
+        except asyncio.CancelledError:
+            return
+
     def _reset_idle_timer(self) -> None:
         """Cancel and restart the idle timer task."""
         if self._idle_task and not self._idle_task.done():
@@ -506,6 +552,7 @@ class SessionManager:
         agent_name: str,
         on_response: Callable,
         on_end: Callable,
+        on_typing: Optional[Callable] = None,
     ) -> Session:
         """Spawn a new agent session for a user.
 
@@ -519,6 +566,8 @@ class SessionManager:
             Async callback ``(chat_id, text)`` for agent output.
         on_end:
             Async callback ``(chat_id, agent_name, reason)`` on session end.
+        on_typing:
+            Optional async callback ``(chat_id,)`` for typing indicators.
 
         Returns
         -------
@@ -562,6 +611,7 @@ class SessionManager:
             idle_timeout=self._idle_timeout,
             shutdown_message=self._shutdown_message,
             cleanup=self._remove_session,
+            on_typing=on_typing,
         )
         self._sessions[chat_id] = session
         session.start()
