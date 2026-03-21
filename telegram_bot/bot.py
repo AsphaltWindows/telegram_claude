@@ -368,6 +368,7 @@ async def agent_command_handler(
                         cid,
                         "Session ended due to repeated message delivery "
                         "failures. Please start a new session.",
+                        max_attempts=1,
                     )
                 except Exception:
                     logger.exception(
@@ -383,16 +384,29 @@ async def agent_command_handler(
     ) -> None:
         reason_messages = {
             "shutdown": f"Session with {aname} ended.",
-            "timeout": f"Session with {aname} timed out due to inactivity.",
-            "crash": f"Session with {aname} ended unexpectedly.",
+            "timeout": (
+                f"Session with `{aname}` timed out after 10 minutes "
+                f"of inactivity. Work has been saved."
+            ),
+            "crash": f"Session with `{aname}` ended unexpectedly.",
         }
         msg = reason_messages.get(reason, f"Session with {aname} ended ({reason}).")
         if reason == "crash" and stderr_tail:
-            msg += f"\n\nDiagnostics:\n```\n{stderr_tail}\n```"
+            msg += f" {stderr_tail}"
         try:
-            await send_long_message(bot, cid, msg)
+            success = await send_long_message(bot, cid, msg)
+            if not success:
+                logger.warning(
+                    "Failed to deliver session-end notification to chat %d "
+                    "(reason=%s). send_long_message returned False.",
+                    cid,
+                    reason,
+                )
         except Exception:
             logger.exception("Failed to send session-end message to chat %d.", cid)
+
+    async def on_typing(cid: int) -> None:
+        await bot.send_chat_action(chat_id=cid, action="typing")
 
     # Start the session.
     try:
@@ -401,6 +415,7 @@ async def agent_command_handler(
             agent_name=agent_name,
             on_response=on_response,
             on_end=on_end,
+            on_typing=on_typing,
         )
     except (FileNotFoundError, OSError) as exc:
         logger.error(
@@ -476,7 +491,19 @@ async def plain_text_handler(
 
     text = update.message.text or ""
     if text.strip():
-        await session_manager.send_message(chat_id, text)
+        try:
+            await session_manager.send_message(chat_id, text)
+        except (RuntimeError, ValueError):
+            # Race condition: the session was removed between has_session()
+            # and send_message(), or the session is shutting down.
+            logger.info(
+                "Session for chat %d ended before message could be delivered. "
+                "Prompting user to start a new session.",
+                chat_id,
+            )
+            await update.message.reply_text(
+                "Your session has ended. Start a new one with /<agent_name>."
+            )
 
 
 # ------------------------------------------------------------------
