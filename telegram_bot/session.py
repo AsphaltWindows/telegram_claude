@@ -185,6 +185,9 @@ class Session:
         self.agent_name = agent_name
         self.process = process
         self.last_activity: float = time.monotonic()
+        self.silence_start: float = time.monotonic()
+        self._sent_15s_status: bool = False
+        self._sent_60s_status: bool = False
 
         self._on_response = on_response
         self._on_end = on_end
@@ -397,7 +400,11 @@ class Session:
 
                 # Reset idle timer on any agent output to prevent
                 # premature session termination during long operations.
-                self.last_activity = time.monotonic()
+                now = time.monotonic()
+                self.last_activity = now
+                self.silence_start = now
+                self._sent_15s_status = False
+                self._sent_60s_status = False
                 self._reset_idle_timer()
 
                 logger.debug(

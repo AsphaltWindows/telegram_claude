@@ -120,7 +120,11 @@ async def test_read_stdout_resets_before_on_response_callback():
     """
     session = _make_session()
 
-    json_line = b'{"type":"assistant","message":{"content":"hey"}}\n'
+    import json
+    json_line = json.dumps({
+        "type": "result",
+        "result": "hey",
+    }).encode() + b"\n"
     session.process.stdout.readline = AsyncMock(
         side_effect=[json_line, b""]
     )

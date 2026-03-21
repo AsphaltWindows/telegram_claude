@@ -59,6 +59,11 @@ def _make_assistant_event(text: str) -> dict:
     }
 
 
+def _make_result_event(text: str) -> dict:
+    """Build a result event with the given text (plain string shape)."""
+    return {"type": "result", "result": text}
+
+
 def _make_mock_process(
     stdout_lines: Optional[List[bytes]] = None,
     stderr_lines: Optional[List[bytes]] = None,
@@ -156,13 +161,13 @@ class TestExtractTextFromEvent:
     """Tests for the stream-json event parser."""
 
     def test_assistant_message_event(self) -> None:
-        """Assistant message events should return the text content."""
+        """Assistant message events should return None (result-only extraction)."""
         event = _make_assistant_event("Hello, world!")
         raw = json.dumps(event)
-        assert _extract_text_from_event(raw) == "Hello, world!"
+        assert _extract_text_from_event(raw) is None
 
     def test_assistant_multi_block_content(self) -> None:
-        """Multiple text blocks should be concatenated."""
+        """Assistant events with multiple text blocks should return None (result-only extraction)."""
         event = {
             "type": "assistant",
             "message": {
@@ -173,16 +178,16 @@ class TestExtractTextFromEvent:
             },
         }
         raw = json.dumps(event)
-        assert _extract_text_from_event(raw) == "Hello world!"
+        assert _extract_text_from_event(raw) is None
 
     def test_content_block_delta_text(self) -> None:
-        """content_block_delta with text_delta should return the text."""
+        """content_block_delta with text_delta should return None (result-only extraction)."""
         event = {
             "type": "content_block_delta",
             "delta": {"type": "text_delta", "text": "partial"},
         }
         raw = json.dumps(event)
-        assert _extract_text_from_event(raw) == "partial"
+        assert _extract_text_from_event(raw) is None
 
     def test_content_block_delta_non_text(self) -> None:
         """content_block_delta with non-text delta should return None."""
@@ -193,15 +198,14 @@ class TestExtractTextFromEvent:
         raw = json.dumps(event)
         assert _extract_text_from_event(raw) is None
 
-    def test_result_with_text_skipped(self) -> None:
-        """Result events with text should be skipped (returns None).
+    def test_result_with_text_extracted(self) -> None:
+        """Result events with text should be extracted (result-only extraction).
 
-        The result event is a turn-level summary that duplicates content
-        already delivered via the assistant event.
+        The result event is the sole source of authoritative turn output.
         """
         event = {"type": "result", "result": "Task completed."}
         raw = json.dumps(event)
-        assert _extract_text_from_event(raw) is None
+        assert _extract_text_from_event(raw) == "Task completed."
 
     def test_result_without_text_skipped(self) -> None:
         """Result events without text should also be skipped."""
@@ -250,13 +254,13 @@ class TestExtractTextFromEvent:
         assert _extract_text_from_event(raw) is None
 
     def test_assistant_with_string_content(self) -> None:
-        """Assistant event where content is a plain string (not list)."""
+        """Assistant event where content is a plain string should return None (result-only extraction)."""
         event = {
             "type": "assistant",
             "message": {"content": "Plain string response"},
         }
         raw = json.dumps(event)
-        assert _extract_text_from_event(raw) == "Plain string response"
+        assert _extract_text_from_event(raw) is None
 
     def test_assistant_with_no_text_blocks(self) -> None:
         """Assistant event with only non-text content blocks returns None."""
@@ -310,12 +314,12 @@ class TestSessionReading:
 
     @pytest.mark.asyncio
     async def test_stdout_json_events_invoke_on_response(self) -> None:
-        """Assistant JSON events on stdout should be relayed via on_response."""
+        """Result JSON events on stdout should be relayed via on_response."""
         on_response = AsyncMock()
         process = _make_mock_process(
             stdout_lines=[
-                _make_stream_json_line(_make_assistant_event("Hello")),
-                _make_stream_json_line(_make_assistant_event("World")),
+                _make_stream_json_line(_make_result_event("Hello")),
+                _make_stream_json_line(_make_result_event("World")),
             ],
         )
         session = _make_session(process=process, on_response=on_response)
@@ -330,12 +334,12 @@ class TestSessionReading:
 
     @pytest.mark.asyncio
     async def test_stdout_skips_non_text_events(self) -> None:
-        """Non-text events (system, tool_use) should NOT trigger on_response."""
+        """Non-text events (system, assistant, tool_use) should NOT trigger on_response."""
         on_response = AsyncMock()
         process = _make_mock_process(
             stdout_lines=[
                 _make_stream_json_line({"type": "system", "subtype": "init"}),
-                _make_stream_json_line(_make_assistant_event("Hello")),
+                _make_stream_json_line(_make_result_event("Hello")),
                 _make_stream_json_line({"type": "tool_use", "name": "bash"}),
             ],
         )
@@ -344,7 +348,7 @@ class TestSessionReading:
 
         await asyncio.sleep(0.05)
 
-        # Only the assistant event should trigger on_response.
+        # Only the result event should trigger on_response.
         assert on_response.call_count == 1
         on_response.assert_called_with(100, "Hello")
 

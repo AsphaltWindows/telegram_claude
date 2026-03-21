@@ -1,5 +1,38 @@
 # Designer Session Log
 
+## 2026-03-21 (session 17)
+
+- **Work found**: 1 open forum topic needing my vote (`2026-03-20T12-00-00Z-qa-stale-session-tests.md`) — 7 stale tests in test_session.py, already well-analyzed by all agents, product_manager created ticket.
+- **Actions**: Voted to close — QA/developer implementation concern, not a design issue. All agents in agreement on the fix.
+- No pending messages for designer.
+
+## 2026-03-21 (session 16)
+
+- **Work found**: 1 open forum topic needing my vote (`2026-03-20T12-00-00Z-qa-stale-session-tests.md`) — QA reporting 7 stale tests in test_session.py that conflict with new extraction logic.
+- **Actions**: Voted to close — this is a QA/developer implementation concern (updating old tests to match new behavior), not a design issue.
+- No pending messages for designer.
+
+## 2026-03-21 (session 15)
+
+- **Work found**: 1 open forum topic (`2026-03-20T00-00-00Z-qa-result-event-test-failures.md`) — QA reporting 5 test failures, task_planner already provided root cause analysis (developer's code changes not applied to live codebase).
+- **Actions**: Voted to close — implementation/code deployment issue, not a design concern.
+- No pending messages for designer.
+
+## 2026-03-20 (session 14)
+
+- **Work found**: 1 open forum topic (`2026-03-20T00-00-00Z-qa-result-event-test-failures.md`) — QA reporting 5 test failures in test_result_event.py related to the fix-bot-silent-after-agent-tool-use ticket.
+- **Actions**: Voted to close — this is a QA/developer implementation concern, not a design issue.
+- No pending messages for designer.
+
+## 2026-03-20 (session 9)
+
+- **Work found**: 1 open forum topic (`2026-03-20T000000Z-operator-typing-indicator-spam-and-frozen-appearance.md`) — still open, had comments from all agents including my prior design comment. Missing my close vote.
+- **Actions**:
+  - Voted to close (topic closed — all agents voted).
+  - Confirmed design doc already contains finalized spec (lines 213-241).
+  - Sent `design_change` message to product_manager (`long-wait-progress-feedback`) to trigger ticket creation for the agreed-upon tiered feedback approach.
+- No pending messages for designer.
+
 ## 2026-03-20 (session 8)
 
 - **Work found**: 1 open forum topic (`2026-03-20-operator-bot-unresponsive-during-agent-file-reads.md`) — still open from prior session, now with comments from all agents.
@@ -61,3 +94,40 @@
 - **Work found**: 1 open forum topic (`2026-03-18-operator-test-works.md`) — informational, pipeline operational confirmation.
 - **Actions**: Voted to close the topic (no design concerns).
 - **Messages pending**: None.
+
+## 2026-03-20T session
+
+- **Work found**: 1 open forum topic (`2026-03-20T000000Z-operator-typing-indicator-spam-and-frozen-appearance.md`) — operator reported typing indicator spam and frozen bot appearance during long agent operations.
+- **Actions taken**:
+  - Reviewed forum topic and current design doc section on heartbeat/typing indicator.
+  - Added detailed design comment to forum topic with tiered feedback strategy (typing indicator → status messages at 15s and 60s thresholds).
+  - Updated `artifacts/designer/design.md` — replaced vague "Enhancement" section with concrete "Heartbeat / Typing Indicator & Long-Wait Feedback" specification including thresholds, implementation requirements, and message text.
+  - Sent `design_change` message to product_manager (`long-wait-feedback-spec`).
+  - Updated insights file with lesson about specifying concrete thresholds.
+
+## 2026-03-21 (session 12)
+
+- **Work found**: 1 open forum topic (`2026-03-21T033300Z-operator-bot-silent-after-agent-tool-use.md`) — critical bug report: bot goes silent after agent uses tools (e.g., "let me look at some files" is delivered but the post-tool response never arrives).
+- **Actions**:
+  - Added detailed design comment analyzing the three theories (agreed Theory A most likely), recommending extraction from `result` events instead of skipping them.
+  - Updated `artifacts/designer/design.md` — rewrote the "Stream-JSON Protocol / Output parsing" section. Changed from "skip result events, extract from assistant only" to "extract from result events only" as the primary approach. Added alternative streaming approach for future. Added empirical verification requirement.
+  - Sent `design_change` message to product_manager (`fix-stream-json-tool-use-handling`).
+  - Updated insights file with lesson about `result` event being the reliable source across all turn types.
+- No pending messages for designer.
+
+## 2026-03-21 (session 13)
+
+- **Work found**: 1 open forum topic (`2026-03-21T033300Z-operator-bot-silent-after-agent-tool-use.md`) — same topic from session 12, still open.
+- **Actions**:
+  - Reviewed topic: all agents had commented, developer and task_planner had close-voted, ticket created. My design comment was already present from session 12.
+  - Voted to close (my close vote was missing).
+- No pending messages for designer.
+
+## 2026-03-20 (session 11)
+
+- **Work found**: 1 open forum topic (`2026-03-20T000001Z-operator-add-agent-output-logging-to-diagnose-missing-responses.md`) — about adding INFO-level logging to diagnose bot appearing frozen during long agent ops. QA had already voted to close.
+- **Actions**:
+  - Added designer comment agreeing with the proposal, noting which events should be INFO vs DEBUG.
+  - Updated `artifacts/designer/design.md` — expanded Diagnostic Logging section with three new subsections: INFO-Level Event Logging, Silence Period Summary Logging, Configurable Log Level. Added `LOG_LEVEL` env var to configuration table.
+  - Voted to close the forum topic.
+  - Sent `design_change` message to product_manager (`add-diagnostic-logging-enhancements`).

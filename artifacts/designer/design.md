@@ -89,6 +89,7 @@ Configuration via environment variables and/or a config file at the project root
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | Yes | Telegram Bot API token from @BotFather |
 | `PIPELINE_YAML` | Yes | Absolute path to `pipeline.yaml` for agent discovery |
+| `LOG_LEVEL` | No | Logging verbosity: `DEBUG`, `INFO` (default), `WARNING`, `ERROR`, `CRITICAL` |
 
 ### Config File: `telegram_bot.yaml`
 
@@ -170,17 +171,45 @@ Flags:
 
 #### Output parsing (`_read_stdout`)
 
-Each line from stdout is a JSON object with a type/role field. The bot must:
-1. Parse each line as JSON
-2. Extract text **only** from `assistant` message events (which contain `content` blocks with `type: "text"`)
-3. **Skip `result` events entirely** — the `result` event is a turn-level summary that duplicates the content already delivered via the `assistant` event. Extracting text from both causes duplicate messages to be sent to the user.
-4. Optionally extract text from `content_block_delta` events (for real-time streaming), but ensure this does not cause duplication with the `assistant` event. The simplest correct approach: extract from `assistant` events only.
-5. Skip all other event types: `system`, `tool_use`, `tool_result`, `content_block_start`, `content_block_stop`, `message_start`, `message_stop`, `message_delta`, `ping`, `error`
+Each line from stdout is a JSON object with a type/role field. The bot must parse each line as JSON and extract assistant text content for relay to the user.
 
-The developer should determine the exact JSON structure empirically by testing:
+**Important: Tool-use turns produce a different event flow than simple responses.** When the agent uses tools (file reads, web searches, etc.), a single user message triggers a multi-step internal turn: the agent emits initial text, then tool_use events, then tool_result events, then (potentially) more text with the final answer. The extraction logic must handle both cases correctly.
+
+##### Recommended approach: extract from `result` events only
+
+The simplest correct approach is to extract text **only from `result` events**:
+
+1. Parse each stdout line as JSON
+2. **Extract text from `result` events** — the `result` event is emitted at the end of each turn and contains the complete, authoritative text for that turn. Extract text from its content blocks (same structure as assistant messages: `content[].text`).
+3. **Skip `assistant` and `content_block_delta` events** — do not extract text from these, since the `result` event already provides the complete turn output. This avoids duplication.
+4. Skip all other event types: `system`, `tool_use`, `tool_result`, `content_block_start`, `content_block_stop`, `message_start`, `message_stop`, `message_delta`, `ping`, `error`
+
+**Why this approach:** During tool-use turns, the agent may emit an initial `assistant` event with partial text (e.g., "Let me look at some files"), perform tool calls, and then produce a final response. With `--print` mode, the post-tool-use response text may **only** appear in the `result` event — not in separate streaming events. Extracting from `result` ensures the complete response is always captured, regardless of whether tools were used.
+
+**Tradeoff:** This loses real-time streaming (the user sees the complete response after the turn finishes, not incrementally). This is acceptable for a Telegram bot where partial message updates are not natural.
+
+##### Alternative approach: streaming with result fallback
+
+If real-time streaming is desired in the future:
+
+1. Extract text from `content_block_delta` events (for incremental delivery)
+2. Track what text has been delivered via deltas during the current turn
+3. When a `result` event arrives, compare its text content against what was already delivered
+4. If the `result` contains text not yet delivered (e.g., the post-tool-use response), extract and send the missing portion
+5. This is more complex and should only be implemented if the simpler approach proves insufficient
+
+##### `result` event as end-of-turn signal
+
+The `result` event signals that the agent has completed its current turn. This is important for:
+- Knowing when the agent's response is complete
+- Resetting silence timers and status message state
+- Potentially detecting when the agent process has finished (if `--print` mode exits after the turn)
+
+**Empirical verification required:** The developer must test the actual event flow by running:
 ```
-echo '{"type":"user","content":"hello"}' | claude --print --output-format stream-json 2>/dev/null
+echo '{"type":"user","content":"read the contents of session.py"}' | claude --print --agent <name> --output-format stream-json --input-format stream-json --verbose 2>/dev/null
 ```
+This will reveal: (a) whether post-tool text appears in streaming events or only in `result`, (b) whether the process exits after emitting `result` or waits for more stdin input, and (c) the exact structure of the `result` event's content field.
 
 #### Input formatting (`send`)
 
@@ -192,6 +221,30 @@ The stdout reader (`_read_stdout`) must include diagnostic logging to aid debugg
 - **On start**: Log that the reader has started (INFO level), including agent name and chat ID
 - **On each line**: Log the first 100 characters of each received line (DEBUG level)
 - **On exit**: Log that the reader has ended (INFO level), including the reason (EOF, cancellation, error)
+
+#### INFO-Level Event Logging
+
+To diagnose cases where the bot appears frozen (typing indicator fires but no messages are sent), the stdout pipeline must log key events at INFO level:
+
+1. **High-signal filtered events**: When `_extract_text_from_event` returns `None` for a `tool_use`, `tool_result`, or `error` event, log at INFO level with event type and a brief summary (e.g., tool name for `tool_use`). This confirms the agent is alive and working even when no text is relayed to the user.
+2. **Extracted text**: When `_extract_text_from_event` returns text, log at INFO level with a truncated preview (first 80 characters). This confirms the extraction path is working.
+3. **Send outcome**: When `on_response` is called, log at INFO level whether the send succeeded or failed. Currently only failures are logged (via exception handling and circuit breaker); success should also be logged.
+4. **Low-signal events** (`ping`, `content_block_start`, `content_block_stop`, `message_start`, `message_stop`, `message_delta`, `system`) remain at DEBUG level to avoid log noise.
+
+#### Silence Period Summary Logging
+
+The typing heartbeat loop (or a parallel task) must log silence diagnostics at INFO level:
+
+- When the heartbeat fires during agent silence, log: the duration of the current silence period, and the count of events received-but-filtered since the last text output.
+- This transforms the typing heartbeat from an invisible background task into actionable diagnostic output (e.g., "Agent silent for 23s, 47 events received but filtered").
+
+#### Configurable Log Level
+
+The bot must support a `LOG_LEVEL` environment variable to allow toggling log verbosity without code changes:
+
+- **Default**: `INFO`
+- **Accepted values**: Standard Python logging level names (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`)
+- Replaces the hardcoded `logging.basicConfig(level=logging.INFO)` with `logging.basicConfig(level=getattr(logging, os.environ.get('LOG_LEVEL', 'INFO').upper()))`
 
 ### Idle Timeout Implementation
 
@@ -210,9 +263,35 @@ If a session is terminated for any reason (idle timeout, crash, error, circuit b
 
 After any session termination, the bot must clean up session state so that new messages from the user follow the normal "no active session" flow and the bot remains responsive.
 
-### Heartbeat / Typing Indicator (Enhancement)
+### Heartbeat / Typing Indicator & Long-Wait Feedback
 
-For long-running agent operations where no output has been received for an extended period, the bot should send a Telegram typing indicator (`chat_action: typing`) or a periodic "Still working..." message to prevent user confusion. This is a lower-priority enhancement — the idle timer fix and session death notifications are the critical requirements.
+During agent operations, the bot provides tiered feedback to prevent users from perceiving the bot as frozen:
+
+#### Typing Indicator (sendChatAction)
+
+- The bot sends a `typing` chat action every **5 seconds** (`_TYPING_HEARTBEAT_INTERVAL`) whenever the agent has not produced output for at least 5 seconds
+- This continues for the entire duration of the agent's silence — there is no cap (the idle timeout handles genuinely stuck sessions)
+- Errors from the typing callback are logged and swallowed — a failed typing indicator must never crash the session
+
+#### Progress Status Messages
+
+When agent silence exceeds the typing indicator alone, the bot sends user-visible status messages to provide clear feedback:
+
+| Silence Duration | Action |
+|---|---|
+| 0–10 seconds | Typing indicator only (standard behavior) |
+| ~15 seconds | Send status message: *"Still working..."* |
+| ~60 seconds | Send status message: *"This is taking a while — still processing your request."* |
+| Beyond 60 seconds | No additional status messages; typing indicator continues until agent responds or idle timeout fires |
+
+**Implementation requirements:**
+
+- Track a `silence_start` timestamp in the session, set to the current time whenever `_read_stdout()` receives agent output. Reset it on each output event.
+- The `_typing_heartbeat` loop (or a parallel task) checks `silence_start` against the thresholds above and sends status messages at the appropriate times.
+- Each status message is sent **once** per silence period — if the agent produces output and then goes silent again, the timers reset.
+- Status messages are sent through the same retry-capable send path as normal agent responses (with the retry and circuit breaker logic described above).
+- Status messages should be visually distinct from agent responses — prefix with a hourglass emoji (⏳) to differentiate, e.g., "⏳ Still working..."
+- Do NOT delete or edit status messages after the agent eventually responds. Keep the implementation simple.
 
 ### Agent Discovery
 

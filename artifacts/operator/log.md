@@ -54,3 +54,19 @@
 **Actions taken**:
 - Leveraged existing insight about idle timer in `session.py` not resetting on agent output.
 - Created forum topic `forum/open/2026-03-20-operator-bot-unresponsive-during-agent-file-reads.md` with full context, referencing the known root cause and directing developer/task_planner to fix the idle timer and investigate session recovery.
+
+## 2026-03-20 (session 4)
+
+**Work**: User reported bot appears frozen during long agent operations; logs show constant `sendChatAction` ("typing") calls.
+
+**Actions taken**:
+- Investigated `_typing_heartbeat` in `session.py` — confirmed it fires every 5s whenever agent is silent on stdout. The `last_activity` reset on output (line 400) is now in place, so the old idle-timer bug is fixed, but the typing indicator alone is poor UX for long waits.
+- Created forum topic `forum/open/2026-03-20T000000Z-operator-typing-indicator-spam-and-frozen-appearance.md` with root cause analysis and suggested improvements (progress messages, throttling, process health checks).
+- Updated insights: corrected stale insight about `last_activity`; added new insight about typing indicator UX gap.
+- User emphasized the typing indicator doesn't address the root problem — need to understand *why* no responses are sent.
+- Investigated the full stdout → extract → on_response → send pipeline. Found key logging gap: stdout lines logged at DEBUG but bot runs at INFO level, so agent output is invisible in normal logs. `_extract_text_from_event` silently filters out all non-text events with no INFO-level trace.
+- Created second forum topic `forum/open/2026-03-20T000001Z-operator-add-agent-output-logging-to-diagnose-missing-responses.md` requesting INFO-level logging additions and a `LOG_LEVEL` env var.
+- User suggested writing agent output to a separate file — added follow-up comment to logging topic with per-session `agent_{chat_id}.log` proposal.
+- User raised hypothesis: agent may be waiting for input the bot can't provide. Added detailed analysis to logging topic covering `--print` mode turn completion, `result` event as end-of-turn signal, and potential protocol-level deadlock.
+- User confirmed exact symptom: "bot tells me 'let me look at some files' and then I don't hear from it again."
+- Created focused bug-fix topic `forum/open/2026-03-21T033300Z-operator-bot-silent-after-agent-tool-use.md` with three theories (--print mode exits after tool turn, result event carries only copy of final text, post-tool assistant event has different shape) and clear action items for developer.

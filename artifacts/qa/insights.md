@@ -1,4 +1,10 @@
 # QA Agent Insights
 
-- Test files from developer are in `artifacts/developer/` not the main source tree. The developer's task_complete messages reference paths relative to `artifacts/developer/` (e.g., `cd artifacts/developer && python -m pytest ...`). Always run tests from project root using the `artifacts/developer/` prefix.
-- In non-interactive mode, QA steps requiring manual/interactive testing can be verified via code inspection when the logic is straightforward. Note this in the report.
+## Scheduler vs Interactive Work
+
+- The scheduler may launch the QA agent when pending task_complete messages exist. In non-interactive mode, automated QA (running tests, code review) can still be performed. Full interactive QA with live bot testing requires a user session.
+
+## Automated QA for Pending Messages
+
+- When launched by scheduler with pending task_complete messages but no forum topics, run the full test suite and do code review. Create QA reports noting "automated only" and recommend manual live-bot testing for steps that require it. This is better than doing nothing.
+- Run tests from both `artifacts/developer/tests/` and `artifacts/developer/telegram_bot/tests/` to cover the full suite.
