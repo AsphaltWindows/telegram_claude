@@ -29,7 +29,7 @@ agents:
     consumes: []
     produces: []
 
-  - name: architect
+  - name: pipeline_builder
     type: source
     scheduled: false
     close_vote_required: false

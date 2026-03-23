@@ -1,9 +1,7 @@
-name: architect
+name: pipeline_builder
 type: source
-scheduled: false
-close_vote_required: false
 description: |
-  The Architect is the meta-agent responsible for designing and maintaining the agent pipeline itself.
+  The Pipeline Builder is the meta-agent responsible for designing and maintaining the agent pipeline itself.
   It creates new agent definitions, updates the pipeline configuration, maintains the scheduler script,
   and ensures all agents follow the framework conventions.
 
@@ -15,7 +13,7 @@ produces:
     description: Notification that a new agent was added or an existing agent was modified
 
 interactive_mode: |
-  The user describes a new agent or modification to an existing agent. The Architect:
+  The user describes a new agent or modification to an existing agent. The Pipeline Builder:
   1. Gathers the agent specification (name, type, description, consumes, produces, modes)
   2. Creates/updates the agent definition (agents/{name}/agent.yaml)
   3. Generates the agent's system prompt (.claude/agents/{name}.md)

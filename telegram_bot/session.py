@@ -31,6 +31,12 @@ _SHUTDOWN_TIMEOUT = 60
 # Telegram typing indicators expire after ~5 seconds, so we re-send at this rate.
 _TYPING_HEARTBEAT_INTERVAL = 5
 
+# Silence thresholds (in seconds) for sending progress status messages.
+# These are checked within the typing heartbeat loop; actual delivery
+# may lag by up to _TYPING_HEARTBEAT_INTERVAL seconds.
+_PROGRESS_15S_THRESHOLD = 15
+_PROGRESS_60S_THRESHOLD = 60
+
 # Maximum number of stderr lines to buffer for crash diagnostics.
 _STDERR_BUFFER_LINES = 10
 
@@ -41,17 +47,12 @@ _STDERR_MAX_CHARS = 500
 def _extract_text_from_event(raw: str) -> Optional[str]:
     """Parse a stream-json line and return assistant text content, if any.
 
-    The function handles several known event shapes emitted by ``claude``
-    in ``--output-format stream-json`` mode:
+    Text is extracted **only from ``result`` events**, which contain the
+    complete, authoritative turn output.  All other event types —
+    including ``assistant`` and ``content_block_delta`` — are skipped.
 
-    * **assistant message** — ``{"type": "assistant", "message": {"content":
-      [{"type": "text", "text": "..."}]}}``
-    * **content_block_delta** — ``{"type": "content_block_delta", "delta":
-      {"type": "text_delta", "text": "..."}}``
-    Events that do not carry displayable text (tool-use, system, result, etc.)
-    return ``None``.  The ``result`` event is a turn-level summary that
-    duplicates content already delivered via the ``assistant`` event and is
-    therefore skipped.
+    High-signal filtered events (``tool_use``, ``tool_result``, ``error``)
+    are logged at INFO level; low-signal events are logged at DEBUG.
 
     Parameters
     ----------
@@ -75,33 +76,46 @@ def _extract_text_from_event(raw: str) -> Optional[str]:
 
     event_type = event.get("type", "")
 
-    # --- assistant message with content blocks ---
-    if event_type == "assistant":
-        message = event.get("message", event)
-        return _extract_text_from_content(message.get("content", []))
+    # --- result event (end-of-turn summary) — sole source of text ---
+    if event_type == "result":
+        text = _extract_text_from_result(event)
+        if text:
+            logger.info(
+                "Extracted text (%d chars): \"%s\"",
+                len(text),
+                text[:80],
+            )
+        else:
+            logger.debug("Result event with no text: %s", raw[:500])
+        return text
 
-    # --- streaming content_block_delta ---
-    if event_type == "content_block_delta":
-        delta = event.get("delta", {})
-        if isinstance(delta, dict) and delta.get("type") == "text_delta":
-            return delta.get("text")
+    # --- high-signal events — log at INFO ---
+    if event_type == "tool_use":
+        tool_name = event.get("name", "unknown")
+        logger.info("Filtered event: tool_use (tool: %s)", tool_name)
         return None
 
-    # --- events we intentionally skip ---
+    if event_type == "tool_result":
+        logger.info("Filtered event: tool_result")
+        return None
+
+    if event_type == "error":
+        logger.info("Filtered event: error — %s", json.dumps(event)[:200])
+        return None
+
+    # --- low-signal events — log at DEBUG ---
     if event_type in (
-        "result",
+        "assistant",
+        "content_block_delta",
         "system",
-        "tool_use",
-        "tool_result",
         "content_block_start",
         "content_block_stop",
         "message_start",
         "message_stop",
         "message_delta",
         "ping",
-        "error",
     ):
-        logger.debug("Skipping %s event from %s", event_type, "agent")
+        logger.debug("Skipping %s event", event_type)
         return None
 
     # Unknown event type — log and skip.
@@ -135,6 +149,119 @@ def _extract_text_from_content(content: Any) -> Optional[str]:
             if text:
                 parts.append(text)
     return "".join(parts) if parts else None
+
+
+def _extract_text_from_result(event: Dict[str, Any]) -> Optional[str]:
+    """Extract text from a ``result`` event.
+
+    The ``result`` event is emitted at the end of each agent turn and may
+    carry the complete response text.  Several payload shapes are handled:
+
+    * ``{"result": "plain text"}`` — text stored directly as a string.
+    * ``{"result": {"content": [{"type": "text", "text": "..."}]}}`` —
+      content-block list nested under ``result``.
+    * ``{"message": {"content": [...]}}`` — content-block list under
+      ``message`` (same shape as ``assistant`` events).
+    * ``{"result": {"message": {"content": [...]}}}`` — doubly nested.
+
+    Parameters
+    ----------
+    event:
+        The parsed result event dictionary.
+
+    Returns
+    -------
+    str or None
+        The extracted text, or ``None`` if no text was found.
+    """
+    # Shape 1: result is a plain string.
+    result_field = event.get("result")
+    if isinstance(result_field, str) and result_field.strip():
+        return result_field
+
+    # Shape 2: result contains content blocks.
+    if isinstance(result_field, dict):
+        # Shape 2a: result.content
+        text = _extract_text_from_content(result_field.get("content", []))
+        if text:
+            return text
+        # Shape 2b: result.message.content
+        inner_msg = result_field.get("message", {})
+        if isinstance(inner_msg, dict):
+            text = _extract_text_from_content(inner_msg.get("content", []))
+            if text:
+                return text
+
+    # Shape 3: message at top level (like assistant events).
+    message = event.get("message")
+    if isinstance(message, dict):
+        text = _extract_text_from_content(message.get("content", []))
+        if text:
+            return text
+
+    return None
+
+
+def _deduplicate_result_text(
+    already_delivered: str, result_text: str,
+) -> Optional[str]:
+    """Return the portion of *result_text* not yet delivered to the user.
+
+    When the agent responds without tool use, the streaming
+    ``content_block_delta`` events deliver the full text incrementally.
+    The ``result`` event at end-of-turn repeats the same text.  In that
+    case we return ``None`` to avoid sending it twice.
+
+    When the agent uses tools, streaming deltas may only deliver the
+    pre-tool text (e.g. "Let me look at some files").  The post-tool
+    response text appears only in the ``result`` event.  This function
+    detects the new suffix and returns it so it can be delivered.
+
+    Parameters
+    ----------
+    already_delivered:
+        Text already sent to the user via streaming deltas during this
+        turn.
+    result_text:
+        Full text extracted from the ``result`` event.
+
+    Returns
+    -------
+    str or None
+        The new text to deliver, or ``None`` if everything was already
+        sent.
+    """
+    if not result_text or not result_text.strip():
+        return None
+
+    if not already_delivered:
+        # Nothing was delivered via deltas — send the full result.
+        return result_text
+
+    # Normalize whitespace for comparison — streaming deltas may have
+    # slightly different whitespace than the result summary.
+    delivered_stripped = already_delivered.strip()
+    result_stripped = result_text.strip()
+
+    if result_stripped == delivered_stripped:
+        # Exact duplicate — skip.
+        return None
+
+    if result_stripped.startswith(delivered_stripped):
+        # Result contains the already-delivered text as a prefix, plus
+        # additional content (the post-tool response).  Return the suffix.
+        suffix = result_stripped[len(delivered_stripped):]
+        return suffix.strip() if suffix.strip() else None
+
+    # The result text differs from what was delivered (could happen with
+    # different formatting, or if the result event contains a reformatted
+    # version).  Deliver the full result to avoid losing content.
+    # This may cause some duplication, but losing content is worse.
+    logger.debug(
+        "Result text does not start with delivered text; "
+        "delivering full result to avoid content loss."
+    )
+    return result_text
 
 
 class Session:
@@ -188,6 +315,7 @@ class Session:
         self.silence_start: float = time.monotonic()
         self._sent_15s_status: bool = False
         self._sent_60s_status: bool = False
+        self._filtered_event_count: int = 0
 
         self._on_response = on_response
         self._on_end = on_end
@@ -198,6 +326,11 @@ class Session:
 
         self._shutting_down = False
         self._ended = False
+
+        # Accumulates text already delivered to the user via streaming deltas
+        # during the current agent turn.  Used for deduplication when the
+        # ``result`` event arrives at the end of the turn.
+        self._turn_delivered_text: str = ""
 
         # Circular buffer of the most recent stderr lines for crash diagnostics.
         self._stderr_lines: Deque[str] = collections.deque(
@@ -413,12 +546,48 @@ class Session:
                     raw[:200],
                 )
 
+                # Detect whether this is a result event so we can
+                # deduplicate against text already delivered via deltas.
+                is_result = False
+                try:
+                    _parsed = json.loads(raw)
+                    if isinstance(_parsed, dict) and _parsed.get("type") == "result":
+                        is_result = True
+                except (json.JSONDecodeError, ValueError):
+                    pass
+
                 text = _extract_text_from_event(raw)
                 if text:
-                    try:
-                        await self._on_response(self.chat_id, text)
-                    except Exception:
-                        logger.exception("on_response callback raised.")
+                    self._filtered_event_count = 0
+                    if is_result:
+                        # End-of-turn: deliver only text not yet sent
+                        # via streaming deltas.
+                        new_text = _deduplicate_result_text(
+                            self._turn_delivered_text, text,
+                        )
+                        self._turn_delivered_text = ""
+                        if new_text:
+                            try:
+                                await self._on_response(
+                                    self.chat_id, new_text,
+                                )
+                            except Exception:
+                                logger.exception(
+                                    "on_response callback raised."
+                                )
+                    else:
+                        self._turn_delivered_text += text
+                        try:
+                            await self._on_response(self.chat_id, text)
+                        except Exception:
+                            logger.exception(
+                                "on_response callback raised."
+                            )
+                else:
+                    self._filtered_event_count += 1
+                    if is_result:
+                        # Result event with no text — just reset the buffer.
+                        self._turn_delivered_text = ""
         except asyncio.CancelledError:
             logger.info(
                 "stdout reader cancelled for agent %s (chat %d)",
@@ -492,8 +661,12 @@ class Session:
         The indicator is re-sent every ``_TYPING_HEARTBEAT_INTERVAL`` seconds
         until new output arrives or the session ends.
 
-        Errors from the callback are logged and swallowed — a failed typing
-        indicator must never crash the session.
+        Additionally, sends user-visible progress status messages at defined
+        silence thresholds (15s and 60s) via the ``on_response`` callback to
+        reassure users during long agent operations.
+
+        Errors from either callback are logged and swallowed — a failed
+        indicator or status message must never crash the session.
         """
         try:
             while not self._ended:
@@ -509,6 +682,43 @@ class Session:
                             "Typing indicator callback failed for chat %d.",
                             self.chat_id,
                         )
+
+                # Log silence summary during agent silence.
+                if self.silence_start is not None:
+                    silence_duration = time.monotonic() - self.silence_start
+                    if silence_duration > 0:
+                        logger.info(
+                            "Agent %s silent for %ds, %d events received but filtered (chat %d)",
+                            self.agent_name,
+                            int(silence_duration),
+                            self._filtered_event_count,
+                            self.chat_id,
+                        )
+
+                # Check progress status message thresholds
+                if self.silence_start is not None:
+                    silence_elapsed = time.monotonic() - self.silence_start
+                    if silence_elapsed >= _PROGRESS_15S_THRESHOLD and not self._sent_15s_status:
+                        self._sent_15s_status = True
+                        try:
+                            await self._on_response(self.chat_id, "\u23f3 Still working...")
+                        except Exception:
+                            logger.exception(
+                                "Failed to send 15s status message for chat %d.",
+                                self.chat_id,
+                            )
+                    if silence_elapsed >= _PROGRESS_60S_THRESHOLD and not self._sent_60s_status:
+                        self._sent_60s_status = True
+                        try:
+                            await self._on_response(
+                                self.chat_id,
+                                "\u23f3 This is taking a while \u2014 still processing your request.",
+                            )
+                        except Exception:
+                            logger.exception(
+                                "Failed to send 60s status message for chat %d.",
+                                self.chat_id,
+                            )
         except asyncio.CancelledError:
             return
 

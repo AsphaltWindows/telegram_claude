@@ -175,7 +175,7 @@ Defined in `pipeline.yaml`. The scheduler reads this to determine:
 
 The `message_types` section defines all message types used in the pipeline. Each type has a name and description. This serves as the canonical registry — the `consumes` and `produces` entries on agents reference these types by name.
 
-Each `produces` entry includes a `to` field listing the consuming agents. This is the authoritative routing table — the producer writes to `messages/{consumer}/{message-type}/pending/` for each agent in the `to` list. The `consumes` entries on receiving agents are the inverse view. The init script and architect use both to create the per-type inbox directories (`messages/{agent}/{message-type}/{pending,active,done}/`).
+Each `produces` entry includes a `to` field listing the consuming agents. This is the authoritative routing table — the producer writes to `messages/{consumer}/{message-type}/pending/` for each agent in the `to` list. The `consumes` entries on receiving agents are the inverse view. The init script and pipeline_builder use both to create the per-type inbox directories (`messages/{agent}/{message-type}/{pending,active,done}/`).
 
 ## Scheduler
 

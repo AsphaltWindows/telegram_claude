@@ -1,7 +1,5 @@
 name: {agent-name}
 type: {source|processing|sink}
-scheduled: {true|false}
-close_vote_required: {true|false} 
 description: |
   {agent role and responsibilities}
 

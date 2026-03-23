@@ -9,24 +9,46 @@ mkdir -p "$LOCK_DIR"
 
 while true; do
 
-# Discover scheduled agents from agents/*/agent.yaml files
-# Skip agents with scheduled: false
+# Parse scheduled agent names from pipeline.yaml (skip agents with scheduled: false)
+# Only parse names under the 'agents:' section, not 'message_types:' or other sections
 AGENTS=""
+CURRENT_AGENT=""
+IS_SCHEDULED=true
+IN_AGENTS_SECTION=false
 
-for AGENT_YAML in "$ROOT_DIR"/agents/*/agent.yaml; do
-    [ -f "$AGENT_YAML" ] || continue
-    AGENT_DIR_NAME=$(basename "$(dirname "$AGENT_YAML")")
-    # Check if scheduled is explicitly set to false
-    if grep -q '^\s*scheduled:\s*false' "$AGENT_YAML"; then
+while IFS= read -r line; do
+    # Detect top-level section headers (no leading whitespace, ends with colon)
+    if echo "$line" | grep -q '^[a-z_]*:'; then
+        if echo "$line" | grep -q '^agents:'; then
+            IN_AGENTS_SECTION=true
+        else
+            # Entering a different section — flush any pending agent
+            if [ "$IN_AGENTS_SECTION" = true ] && [ -n "$CURRENT_AGENT" ] && [ "$IS_SCHEDULED" = true ]; then
+                AGENTS="$AGENTS $CURRENT_AGENT"
+            fi
+            IN_AGENTS_SECTION=false
+            CURRENT_AGENT=""
+        fi
         continue
     fi
-    AGENTS="$AGENTS $AGENT_DIR_NAME"
-done
+    [ "$IN_AGENTS_SECTION" = true ] || continue
+    if echo "$line" | grep -q '^\s*-\?\s*name:'; then
+        if [ -n "$CURRENT_AGENT" ] && [ "$IS_SCHEDULED" = true ]; then
+            AGENTS="$AGENTS $CURRENT_AGENT"
+        fi
+        CURRENT_AGENT=$(echo "$line" | sed 's/.*name:\s*//' | tr -d ' ')
+        IS_SCHEDULED=true
+    elif echo "$line" | grep -q '^\s*scheduled:\s*false'; then
+        IS_SCHEDULED=false
+    fi
+done < "$PIPELINE"
+if [ "$IN_AGENTS_SECTION" = true ] && [ -n "$CURRENT_AGENT" ] && [ "$IS_SCHEDULED" = true ]; then
+    AGENTS="$AGENTS $CURRENT_AGENT"
+fi
 
 if [ -z "$AGENTS" ]; then
-    echo "No scheduled agents found in agents/*/"
-    sleep "$( grep '^\s*scheduler_interval:' "$PIPELINE" | sed 's/.*scheduler_interval:\s*//' | tr -d ' ' )"
-    continue
+    echo "No agents defined in pipeline.yaml"
+    exit 0
 fi
 
 for AGENT in $AGENTS; do
@@ -83,8 +105,8 @@ for AGENT in $AGENTS; do
 
     # Read agent type and check for script runner
     AGENT_YAML="$ROOT_DIR/agents/${AGENT}/agent.yaml"
-    AGENT_TYPE=$(grep '^\s*type:' "$AGENT_YAML" | sed 's/.*type:\s*//' | tr -d ' ' || true)
-    AGENT_SCRIPT=$(grep '^\s*script:' "$AGENT_YAML" 2>/dev/null | sed 's/.*script:\s*//' | tr -d ' ' || true)
+    AGENT_TYPE=$(grep '^\s*type:' "$AGENT_YAML" | sed 's/.*type:\s*//' | tr -d ' ')
+    AGENT_SCRIPT=$(grep '^\s*script:' "$AGENT_YAML" 2>/dev/null | sed 's/.*script:\s*//' | tr -d ' ')
 
     if [ -n "$AGENT_SCRIPT" ]; then
         # Script-based node — run the script directly
@@ -102,7 +124,7 @@ for AGENT in $AGENTS; do
 
         # Launch script in background
         (
-            echo "$BASHPID" > "$LOCK_FILE"
+            echo "$$" > "$LOCK_FILE"
             echo "[$AGENT] Launching script (type: $AGENT_TYPE): $AGENT_SCRIPT"
             "$SCRIPT_PATH" "$ROOT_DIR" "$AGENT"
             rm -f "$LOCK_FILE"
@@ -118,13 +140,25 @@ for AGENT in $AGENTS; do
 
         # Launch agent in background
         (
-            echo "$BASHPID" > "$LOCK_FILE"
+            echo "$$" > "$LOCK_FILE"
 
             echo "[$AGENT] Launching (type: $AGENT_TYPE)..."
 
-            claude -p "You have been launched by the scheduler in non-interactive mode. Find and process your work, then exit." \
-                --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
-                --agent "$AGENT"
+            # --- AGENT LAUNCH COMMAND ---
+            # Replace this with your LLM invocation.
+            # The agent should receive:
+            #   1. Its system prompt (.claude/agents/{name}.md)
+            #   2. Access to the ROOT_DIR for reading artifacts, messages, and forum topics
+            #
+            # The agent is responsible for finding its own work:
+            #   - Check forum/open/ for topics needing its attention
+            #   - Check messages/{name}/{type}/pending/ for pending messages
+            #   - Process work in priority order (forum first, then messages)
+            #   - Move messages through pending/ -> active/ -> done/
+            #
+            # Example (placeholder):
+            # your-llm-cli --system-prompt "$PROMPT_FILE" --root "$ROOT_DIR"
+            echo "[$AGENT] TODO: Invoke LLM agent here with prompt=$PROMPT_FILE"
 
             rm -f "$LOCK_FILE"
         ) &

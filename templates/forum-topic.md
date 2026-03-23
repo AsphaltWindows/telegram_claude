@@ -6,7 +6,6 @@
 - **Status**: open
 
 ## Close Votes
-<!-- ONE VOTE PER LINE: VOTE:{agent-name} -->
 
 ## Discussion
 

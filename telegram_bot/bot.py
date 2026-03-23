@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+import os
 import subprocess
 import sys
 from typing import List, Optional
@@ -350,6 +351,7 @@ async def agent_command_handler(
         success = await send_long_message(bot, cid, text)
         if success:
             failure_state["consecutive_failures"] = 0
+            logger.info("Message sent to chat %d (%d chars)", cid, len(text))
         else:
             failure_state["consecutive_failures"] += 1
             if failure_state["consecutive_failures"] >= _CIRCUIT_BREAKER_THRESHOLD:
@@ -570,10 +572,24 @@ def main() -> None:
     Runs a pre-flight check to verify that the ``claude`` CLI is
     available and functional before starting the Telegram polling loop.
     """
+    # Configure log level from LOG_LEVEL environment variable.
+    log_level_name = os.environ.get("LOG_LEVEL", "INFO").upper()
+    log_level = getattr(logging, log_level_name, None)
+    invalid_log_level = log_level is None
+    if invalid_log_level:
+        log_level = logging.INFO
+
     logging.basicConfig(
-        level=logging.INFO,
+        level=log_level,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
+
+    if invalid_log_level:
+        logger.warning(
+            "Invalid LOG_LEVEL '%s', falling back to INFO",
+            os.environ.get("LOG_LEVEL"),
+        )
+    logger.info("Log level set to %s", logging.getLevelName(log_level))
 
     # Load config early so we can use claude_path for the pre-flight check.
     config = load_config()
